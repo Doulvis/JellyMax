@@ -32,7 +32,9 @@ function studioDir() {
 
 function run(cmd, args) {
   console.log(`> ${path.basename(cmd)} ${args.join(' ')}`);
-  const r = spawnSync(`"${cmd}"`, args.map((a) => (/\s/.test(a) ? `"${a}"` : a)), { stdio: 'inherit', shell: true });
+  // tizen.bat est un script batch : il doit passer par l'interpréteur de commandes.
+  const line = [cmd, ...args].map((a) => (/\s/.test(a) ? `"${a}"` : a)).join(' ');
+  const r = spawnSync(line, { stdio: 'inherit', shell: true });
   if (r.status !== 0) fail(`La commande a échoué (code ${r.status}).`);
 }
 

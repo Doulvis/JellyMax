@@ -62,7 +62,20 @@ Samsung only allows apps from outside the store to be installed in developer mod
 1. **Enable developer mode on the TV**: open *Apps*, type `1 2 3 4 5` on the remote, turn *Developer mode* on, enter your PC's IP address, then restart the TV.
 2. **Install [Tizen Studio](https://developer.samsung.com/smarttv/develop/getting-started/setting-up-sdk/installing-tv-sdk.html)** with, in the Package Manager, *Samsung Certificate Extension* and the *TV Extensions* tools.
 3. **Create a certificate**: in Tizen Studio, *Tools → Certificate Manager → +*, choose *Samsung*, *TV*, then sign in with a Samsung account. Add your TV's DUID (shown when the TV is connected through *Device Manager*).
-4. **Build, package and install**:
+4. **Sign and install** — either option works:
+
+   **Option A — from the Releases page.** Download `JellyMax-x.y.z.wgt`, then re-sign it with your certificate and install it (replace `MyProfile` with your certificate profile name and the IP with your TV's):
+
+   ```powershell
+   cd C:\tizen-studio\tools
+   .\sdb.exe connect 192.168.1.50
+   .\ide\bin\tizen.bat package -t wgt -s MyProfile -- C:\path\to\JellyMax-1.0.0.wgt
+   .\ide\bin\tizen.bat install -n JellyMax-1.0.0.wgt -s 192.168.1.50:26101 -- C:\path\to
+   ```
+
+   The `.wgt` on the Releases page is signed with a generic author certificate: it cannot be installed as is, Samsung TVs only accept apps signed with a certificate created for them.
+
+   **Option B — from source.**
 
    ```powershell
    npm install
