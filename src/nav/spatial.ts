@@ -71,16 +71,13 @@ function focusEl(el: HTMLElement, dir: Dir | null, instant: boolean) {
   if (!el.closest(SIDENAV)) lastMain = el;
   el.focus({ preventScroll: true });
   const vertical = dir === 'up' || dir === 'down';
-  // TV, changement de carrousel : alignement horizontal immédiat puis défilement vertical animé.
-  if (isTV && vertical && !instant && scopeRoot() === document && el.closest('.rail, .hero')) {
-    const from = window.scrollY;
+  // TV, changement de carrousel : alignement horizontal puis recentrage vertical immédiat, sans animation.
+  if (isTV && vertical && scopeRoot() === document && el.closest('.rail, .hero')) {
     if (scrollAnim) cancelAnimationFrame(scrollAnim);
     scrollAnim = 0;
     el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     const r = el.getBoundingClientRect();
-    const target = window.scrollY + r.top + r.height / 2 - window.innerHeight / 2;
-    window.scrollTo(0, from);
-    animateScrollTo(target);
+    window.scrollTo(0, Math.round(window.scrollY + r.top + r.height / 2 - window.innerHeight / 2));
     return;
   }
   if (isTV && scrollAnim) {
