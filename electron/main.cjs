@@ -127,6 +127,57 @@ ipcMain.on('toggle-fullscreen', () => {
   if (win) win.setFullScreen(!win.isFullScreen());
 });
 
+// ---- Google Cast (voir cast.cjs) ----
+let castDevices = [];
+let stopCastDiscovery = null;
+let castSession = null;
+
+function sendToWin(channel, data) {
+  if (win && !win.isDestroyed()) win.webContents.send(channel, data);
+}
+
+ipcMain.on('cast-discover', (_e, on) => {
+  if (on && !stopCastDiscovery) {
+    stopCastDiscovery = discover((list) => {
+      castDevices = list;
+      sendToWin('cast-devices', list);
+    });
+    sendToWin('cast-devices', castDevices);
+  } else if (!on && stopCastDiscovery) {
+    stopCastDiscovery();
+    stopCastDiscovery = null;
+  }
+});
+ipcMain.handle('cast-connect', async (_e, id) => {
+  const device = castDevices.find((d) => d.id === id);
+  if (!device) throw new Error('Appareil introuvable');
+  if (castSession) await castSession.stop();
+  const s = new CastSession(device);
+  castSession = s;
+  s.on('status', (st) => {
+    if (castSession !== s) return;
+    if (!st.connected) castSession = null;
+    sendToWin('cast-status', st);
+  });
+  try {
+    await s.start();
+  } catch (e) {
+    s.finish();
+    throw e;
+  }
+  return { id: device.id, name: device.name };
+});
+ipcMain.handle('cast-load', (_e, media) => {
+  if (!castSession) throw new Error('Aucun appareil Cast connecté');
+  return castSession.load(media);
+});
+ipcMain.on('cast-control', (_e, cmd) => {
+  if (castSession) castSession.control(cmd);
+});
+ipcMain.handle('cast-disconnect', () => (castSession ? castSession.stop() : undefined));
+// Après un rechargement de la page : session encore active ?
+ipcMain.handle('cast-current', () => (castSession ? { id: castSession.device.id, name: castSession.device.name } : null));
+
 app.on('second-instance', () => {
   if (!win) return;
   if (win.isMinimized()) win.restore();
@@ -149,4 +200,7 @@ app.whenReady().then(() => {
   createWindow();
 });
 
-app.on('window-all-closed', () => app.quit());
+app.on('window-all-closed', () => {
+  if (castSession) castSession.stop();
+  app.quit();
+});

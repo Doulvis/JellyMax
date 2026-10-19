@@ -1,9 +1,22 @@
 // Couche plateforme : Windows (Electron), TV Samsung (Tizen) et navigateur pour le développement.
 
+import type { CastCommand, CastDevice, CastMedia, CastStatus } from './cast/cast';
+
 interface JellyMaxBridge {
   platform: 'electron';
   setPlaybackActive(active: boolean): void;
   toggleFullscreen(): void;
+  /** Google Cast (electron/cast.cjs). */
+  cast?: {
+    discover(on: boolean): void;
+    connect(id: string): Promise<{ id: string; name: string }>;
+    load(media: CastMedia): Promise<void>;
+    control(cmd: CastCommand): void;
+    disconnect(): Promise<void>;
+    current(): Promise<{ id: string; name: string } | null>;
+    onDevices(cb: (list: CastDevice[]) => void): () => void;
+    onStatus(cb: (s: CastStatus) => void): () => void;
+  };
 }
 
 // Sous-ensemble des API Tizen / Samsung utilisées par l'application.
@@ -27,7 +40,7 @@ declare global {
 }
 
 export const APP_NAME = 'JellyMax';
-export const APP_VERSION = '1.2.0';
+export const APP_VERSION = '1.0';
 
 export const isElectron = typeof window !== 'undefined' && !!window.jellymax;
 /** Application installée sur une TV Samsung (API Tizen disponibles). */

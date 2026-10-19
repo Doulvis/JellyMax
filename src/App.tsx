@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, type ReactElement } from 'react';
 import { HashRouter, Navigate, Outlet, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+import { CastBar } from './cast/CastUI';
 import { SideNav } from './components/SideNav';
 import Catalog from './pages/Catalog';
 import Detail from './pages/Detail';
@@ -36,6 +37,7 @@ function MainLayout() {
       <main className="app-main">
         <Outlet />
       </main>
+      <CastBar />
     </>
   );
 }

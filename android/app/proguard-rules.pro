@@ -19,3 +19,6 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# Google Cast : classe d'options référencée par son nom dans AndroidManifest.xml.
+-keep class app.jellymax.mobile.CastOptionsProvider { *; }

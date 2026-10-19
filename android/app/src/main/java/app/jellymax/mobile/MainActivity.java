@@ -11,6 +11,7 @@ public class MainActivity extends BridgeActivity {
         // Écran de démarrage JellyMax (méduse sur fond noir), y compris avant Android 12.
         SplashScreen.installSplashScreen(this);
         registerPlugin(JellyMaxSystemPlugin.class);
+        registerPlugin(JellyMaxCastPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

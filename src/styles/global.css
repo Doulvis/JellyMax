@@ -2947,6 +2947,219 @@ img {
   line-height: 1.55;
 }
 
+/* ---------- Google Cast ---------- */
+.player.is-casting {
+  cursor: auto;
+}
+.player.is-casting .player__chrome,
+.player.is-casting .player__click,
+.player.is-casting .player__subs,
+.player.is-casting .player__center-spinner {
+  display: none;
+}
+.castremote {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 8;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: #05060a;
+}
+.castremote__bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-size: cover;
+  background-position: center;
+  opacity: 0.32;
+  filter: blur(6px) saturate(1.2);
+  transform: scale(1.04);
+}
+.castremote > :not(.castremote__bg) {
+  position: relative;
+}
+.castremote__center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
+  text-align: center;
+  padding: 0 var(--gutter);
+}
+.castremote__device {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--text-2);
+}
+.castremote__device svg {
+  width: 1.6rem;
+  height: 1.6rem;
+  color: var(--accent);
+}
+.castremote__controls {
+  display: flex;
+  align-items: center;
+  gap: 3.5rem;
+}
+.castremote__state {
+  color: var(--text-3);
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.castremote .pbtn:disabled {
+  opacity: 0.6;
+}
+.castremote .player__bottom {
+  background: none;
+}
+.ppanel--cast {
+  width: 24rem;
+  max-width: calc(100vw - 2 * var(--gutter));
+  z-index: 12;
+}
+.castpick__device small {
+  color: var(--text-3);
+}
+.castpick__device .spinner {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+.castpick__searching {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  line-height: 1.5;
+}
+.castpick__error {
+  color: #ff8a80;
+  line-height: 1.5;
+}
+.castpick__connected {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1rem;
+}
+.castpick__connected .castpick__device {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  font-weight: 600;
+}
+.castpick__connected svg {
+  width: 1.3rem;
+  height: 1.3rem;
+  color: var(--accent);
+}
+
+/* Mini-barre de diffusion hors du lecteur. */
+.castbar {
+  position: fixed;
+  right: var(--gr);
+  bottom: 1.5rem;
+  z-index: 70;
+  width: 27rem;
+  max-width: calc(100vw - 2rem);
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.5rem 0.6rem 0.65rem 0.5rem;
+  border-radius: 0.8rem;
+  background: rgba(20, 22, 34, 0.86);
+  -webkit-backdrop-filter: blur(24px) saturate(1.6);
+  backdrop-filter: blur(24px) saturate(1.6);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+}
+.castbar__main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  text-align: left;
+  border-radius: 0.45rem;
+}
+.castbar__main:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px #fff;
+}
+.castbar__thumb {
+  width: 5.6rem;
+  aspect-ratio: 16 / 9;
+  flex-shrink: 0;
+  border-radius: 0.4rem;
+  overflow: hidden;
+  background: #111;
+}
+.castbar__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.castbar__text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.castbar__text strong {
+  font-size: 0.92rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.castbar__text small {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--text-3);
+  font-size: 0.78rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.castbar__text small svg {
+  width: 0.95rem;
+  height: 0.95rem;
+  flex-shrink: 0;
+  color: var(--accent);
+}
+.castbar .pbtn {
+  width: 2.5rem;
+  height: 2.5rem;
+  flex-shrink: 0;
+}
+.castbar .pbtn svg {
+  width: 1.3rem;
+  height: 1.3rem;
+}
+.castbar__progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.12);
+}
+.castbar__progress span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+
 /* ---------- Fenêtres étroites ---------- */
 @media (max-width: 900px) {
   .hero__content,

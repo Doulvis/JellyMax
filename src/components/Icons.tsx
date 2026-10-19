@@ -140,6 +140,13 @@ export const Info = (p: P) => (
     <path d="M12 11v5.5M12 7.8v.1" />
   </Svg>
 );
+export const Cast = (p: P) => (
+  <Svg {...p}>
+    <path d="M2 8V6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6" />
+    <path d="M2 12a9 9 0 0 1 8 8M2 16a5 5 0 0 1 4 4" />
+    <path d="M2 20h.01" />
+  </Svg>
+);
 export const Close = (p: P) => (
   <Svg {...p}>
     <path d="M6 6l12 12M18 6L6 18" />

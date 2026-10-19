@@ -270,6 +270,21 @@ const fr = {
     "Ce serveur ne propose pas de galerie d'avatars (plugin Jellyfin « GetAvatar »). Vous pouvez importer votre propre image.",
   'avatar.empty': 'La galerie de ce serveur est vide.',
   'avatar.error': "Impossible de modifier l'avatar.",
+  // Google Cast
+  'cast.button': 'Diffuser sur un appareil',
+  'cast.title': 'Diffuser sur',
+  'cast.searching': 'Recherche des appareils sur le réseau…',
+  'cast.none': 'Aucun appareil trouvé. Vérifiez que le Chromecast ou la TV est allumé et connecté au même réseau Wi-Fi.',
+  'cast.connecting': 'Connexion…',
+  'cast.connectedTo': 'Connecté à {name}',
+  'cast.playingOn': 'Lecture sur {name}',
+  'cast.loading': 'Chargement sur {name}…',
+  'cast.paused': 'En pause',
+  'cast.disconnect': 'Arrêter la diffusion',
+  'cast.connectFailed': 'Impossible de se connecter à {name} : {reason}',
+  'cast.notConnected': 'Aucun appareil Cast connecté.',
+  'cast.playError': "L'appareil Cast n'a pas pu lire cette vidéo. Réessayez, ou arrêtez la diffusion pour la regarder ici.",
+  'cast.localServer': "Le serveur est enregistré avec une adresse locale (localhost) que l'appareil Cast ne peut pas joindre. Reconnectez-vous au serveur avec son adresse sur le réseau, par exemple http://192.168.1.10:8096.",
 };
 
 type Key = keyof typeof fr;
@@ -523,6 +538,21 @@ const en: Record<Key, string> = {
   'avatar.noGallery': 'This server has no avatar gallery (Jellyfin “GetAvatar” plugin). You can upload your own image.',
   'avatar.empty': "This server's gallery is empty.",
   'avatar.error': 'Unable to change the avatar.',
+  // Google Cast
+  'cast.button': 'Cast to a device',
+  'cast.title': 'Cast to',
+  'cast.searching': 'Looking for devices on your network…',
+  'cast.none': 'No device found. Make sure your Chromecast or TV is on and connected to the same Wi-Fi network.',
+  'cast.connecting': 'Connecting…',
+  'cast.connectedTo': 'Connected to {name}',
+  'cast.playingOn': 'Playing on {name}',
+  'cast.loading': 'Loading on {name}…',
+  'cast.paused': 'Paused',
+  'cast.disconnect': 'Stop casting',
+  'cast.connectFailed': 'Could not connect to {name}: {reason}',
+  'cast.notConnected': 'No Cast device connected.',
+  'cast.playError': 'The Cast device could not play this video. Try again, or stop casting to watch it here.',
+  'cast.localServer': 'The server is saved with a local address (localhost) that the Cast device cannot reach. Sign in to the server again using its network address, for example http://192.168.1.10:8096.',
 };
 
 export type TranslationKey = Key;

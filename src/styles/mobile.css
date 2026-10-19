@@ -838,3 +838,24 @@ html.is-mobile {
 .player__seek-flash--right {
   right: 12%;
 }
+
+/* ---------- Google Cast ---------- */
+.is-mobile .castbar {
+  left: 0.75rem;
+  right: 0.75rem;
+  width: auto;
+  max-width: none;
+  bottom: calc(var(--tabbar) + 1.6rem + var(--safe-bottom));
+}
+.is-mobile .castremote__controls {
+  gap: 2rem;
+}
+.is-mobile .castremote__device {
+  font-size: 1rem;
+}
+.is-mobile .ppanel--cast {
+  left: 0.75rem;
+  right: 0.75rem;
+  width: auto;
+  max-width: none;
+}

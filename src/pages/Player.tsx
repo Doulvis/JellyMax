@@ -4,8 +4,21 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, 
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { api } from '../api/client';
 import { buildDeviceProfile } from '../api/deviceProfile';
-import { landscapeUrl } from '../api/images';
+import { backdropUrl, landscapeUrl } from '../api/images';
 import type { BaseItem, MediaSegment, MediaStream, TrickplayInfo } from '../api/types';
+import {
+  castControl,
+  castItem,
+  castSeekBy,
+  castState,
+  castTogglePlay,
+  connectDevice,
+  disconnectDevice,
+  isCasting,
+  useCast,
+  type CastDevice,
+} from '../cast/cast';
+import { CastPicker } from '../cast/CastUI';
 import { Spinner } from '../components/Common';
 import * as I from '../components/Icons';
 import { isBackKey, isMobile, isTV, keyName, setPlaybackActive } from '../platform';
@@ -16,7 +29,7 @@ import { episodeCode, errorMessage, formatClock, formatRuntime, TPS } from '../u
 import { activeCueHtml, parseVtt, type Cue } from '../utils/vtt';
 
 type PlayMethod = 'DirectPlay' | 'DirectStream' | 'Transcode';
-type Panel = null | 'tracks' | 'quality' | 'episodes';
+type Panel = null | 'tracks' | 'quality' | 'episodes' | 'cast';
 
 interface PlaySession {
   itemId: string;
@@ -67,6 +80,8 @@ export default function Player() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const settings = useSettings();
+  const cast = useCast();
+  const castingHere = !!cast.device && !!cast.item && cast.item.Id === id;
 
   // Le ref vidéo n'est jamais remis à null : on en a besoin pendant le démontage pour le rapport final.
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -317,6 +332,34 @@ export default function Player() {
     }
   };
 
+  /** Démarre la lecture sur l'appareil Cast connecté, sinon dans l'application. */
+  const begin = async (opts: StartOptions) => {
+    if (!castState().device) return start(opts);
+    loadIdRef.current++;
+    endSession(true);
+    teardownMedia();
+    setPlaybackActive(false);
+    setError(null);
+    setBuffering(false);
+    startPosRef.current = opts.startSec;
+    try {
+      await castItem(opts.item, opts.startSec, opts.audioIndex, opts.subIndex);
+    } catch (e) {
+      setError(errorMessage(e));
+    }
+  };
+
+  /** Connexion à un appareil Cast choisi dans le panneau, puis envoi de la vidéo à la position actuelle. */
+  const pickCastDevice = async (device: CastDevice) => {
+    await connectDevice(device);
+    setPanel(null);
+    const it = live.current.item;
+    const v = videoRef.current;
+    if (!it) return;
+    const pos = v && v.currentTime > 0 ? v.currentTime : startPosRef.current;
+    await begin({ item: it, startSec: pos, audioIndex: live.current.audioIndex, subIndex: live.current.subIndex, level: 0 });
+  };
+
   /** Repli automatique : lecture directe → remux → transcodage complet. */
   const fallback = (reason: string) => {
     const it = live.current.item;
@@ -483,7 +526,7 @@ export default function Player() {
   const retry = () => {
     const it = live.current.item;
     if (!it) return;
-    start({
+    begin({
       item: it,
       startSec: startPosRef.current,
       audioIndex: live.current.audioIndex,
@@ -532,8 +575,8 @@ export default function Player() {
     requestAnimationFrame(() => playBtnRef.current && playBtnRef.current.focus({ preventScroll: true }));
   };
 
-  const actions = useRef({ start, endSession, teardownMedia, onHlsError, fallback, poke, focusPlay, togglePlay, seekBy, changeVolume, toggleFullscreen, exit, goNext, setPanel, reportProgress });
-  actions.current = { start, endSession, teardownMedia, onHlsError, fallback, poke, focusPlay, togglePlay, seekBy, changeVolume, toggleFullscreen, exit, goNext, setPanel, reportProgress };
+  const actions = useRef({ start, begin, endSession, teardownMedia, onHlsError, fallback, poke, focusPlay, togglePlay, seekBy, changeVolume, toggleFullscreen, exit, goNext, setPanel, reportProgress });
+  actions.current = { start, begin, endSession, teardownMedia, onHlsError, fallback, poke, focusPlay, togglePlay, seekBy, changeVolume, toggleFullscreen, exit, goNext, setPanel, reportProgress };
 
   // ---------------------------------------------------------------------------
   // Effets
@@ -573,7 +616,9 @@ export default function Player() {
         setSubIndex(s);
         live.current.audioIndex = a;
         live.current.subIndex = s;
-        await actions.current.start({ item: it, startSec, audioIndex: a, subIndex: s, level: 0 });
+        // Déjà en lecture sur l'appareil Cast (retour depuis la mini-barre) : rien à relancer.
+        if (isCasting(it.Id)) setBuffering(false);
+        else await actions.current.begin({ item: it, startSec, audioIndex: a, subIndex: s, level: 0 });
         if (cancelled) return;
         api.segments(it.Id).then((r) => !cancelled && setSegments(r));
         if (it.Type === 'Episode' && it.SeriesId) {
@@ -601,6 +646,29 @@ export default function Player() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  // Fin de la diffusion Cast de cet élément : épisode suivant, sortie, ou reprise dans l'application.
+  const handledCastEnd = useRef(castState().lastEnd ? castState().lastEnd!.seq : 0);
+  useEffect(() => {
+    const e = cast.lastEnd;
+    if (!e || e.seq === handledCastEnd.current) return;
+    handledCastEnd.current = e.seq;
+    const it = live.current.item;
+    if (e.itemId !== id || !it) return;
+    const a = actions.current;
+    if (e.reason === 'finished') {
+      if (live.current.nextEp && getSettings().autoplayNext) a.goNext();
+      else a.exit();
+      return;
+    }
+    if (e.reason === 'error') {
+      startPosRef.current = e.time;
+      setError(t('cast.playError'));
+      return;
+    }
+    a.start({ item: it, startSec: e.time, audioIndex: live.current.audioIndex, subIndex: live.current.subIndex, level: failLevelRef.current });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cast.lastEnd]);
 
   // Rapport de progression toutes les 10 s.
   useEffect(() => {
@@ -671,6 +739,18 @@ export default function Player() {
         stop();
         if (panelOpen) a.setPanel(null);
         else a.exit();
+        return;
+      }
+      // Diffusion Cast : les touches pilotent l'appareil.
+      if (live.current.item && isCasting(live.current.item.Id)) {
+        if (panelOpen) return;
+        if (key === ' ' || key === 'k' || key === 'K' || key === 'MediaPlayPause') {
+          stop();
+          castTogglePlay();
+        } else if (key === 'ArrowLeft' || key === 'ArrowRight') {
+          stop();
+          castSeekBy(key === 'ArrowLeft' ? -10 : 10);
+        }
         return;
       }
       a.poke();
@@ -894,7 +974,7 @@ export default function Player() {
 
   return (
     <div
-      className={`player ${controls ? 'show-controls' : 'hide-controls'} ${buffering ? 'is-buffering' : ''}`}
+      className={`player ${controls || castingHere ? 'show-controls' : 'hide-controls'} ${buffering ? 'is-buffering' : ''} ${castingHere ? 'is-casting' : ''}`}
       // Mobile : les commandes s'affichent / se masquent d'un appui (voir onSurfaceTap), pas à chaque contact.
       onMouseMove={isMobile ? undefined : () => poke()}
       onTouchStart={isMobile ? undefined : () => poke()}
@@ -1062,6 +1142,16 @@ export default function Player() {
               >
                 <I.Sliders />
               </button>
+              {cast.supported && !isTV && (
+                <button
+                  className={`pbtn ${panel === 'cast' ? 'is-on' : ''}`}
+                  onClick={() => setPanel(panel === 'cast' ? null : 'cast')}
+                  aria-label={t('cast.button')}
+                  title={t('cast.button')}
+                >
+                  <I.Cast />
+                </button>
+              )}
               {!isTV && !isMobile && (
                 <button className="pbtn" onClick={toggleFullscreen} aria-label={t('player.fullscreen')} title={t('player.fullscreen')}>
                   {fullscreen ? <I.ExitFullscreen /> : <I.Fullscreen />}
@@ -1072,13 +1162,17 @@ export default function Player() {
         </div>
       </div>
 
-      {skipSeg && !error && !settings.autoSkipIntro && (
+      {castingHere && item && (
+        <CastRemote item={item} title={title} subtitle={subtitle} onBack={exit} onDevices={() => setPanel(panel === 'cast' ? null : 'cast')} />
+      )}
+
+      {skipSeg && !error && !castingHere && !settings.autoSkipIntro && (
         <button className="player__skip" onClick={() => seekTo(skipSeg.EndTicks / TPS)}>
           {skipSeg.Type === 'Recap' ? t('player.skipRecap') : t('player.skipIntro')}
         </button>
       )}
 
-      {showNext && nextEp && (
+      {showNext && nextEp && !castingHere && (
         <NextCard
           ep={nextEp}
           countdown={countdown}
@@ -1139,6 +1233,17 @@ export default function Player() {
         </div>
       )}
 
+      {panel === 'cast' && (
+        <CastPicker
+          onPick={pickCastDevice}
+          onDisconnect={() => {
+            setPanel(null);
+            disconnectDevice();
+          }}
+          onClose={() => setPanel(null)}
+        />
+      )}
+
       {panel === 'episodes' && item && item.SeriesId && (
         <EpisodesPanel
           seriesId={item.SeriesId}
@@ -1160,6 +1265,11 @@ export default function Player() {
             <button className="btn btn--primary" onClick={retry} autoFocus>
               {t('common.retry')}
             </button>
+            {cast.device && (
+              <button className="btn btn--ghost" onClick={() => disconnectDevice().then(retry)}>
+                {t('cast.disconnect')}
+              </button>
+            )}
             <button className="btn btn--ghost" onClick={exit}>
               {t('common.back')}
             </button>
@@ -1270,6 +1380,96 @@ function Scrubber({
           <span>{formatClock(preview)}</span>
         </div>
       )}
+    </div>
+  );
+}
+
+/** Télécommande affichée pendant la diffusion sur un appareil Cast. */
+function CastRemote({
+  item,
+  title,
+  subtitle,
+  onBack,
+  onDevices,
+}: {
+  item: BaseItem;
+  title?: string;
+  subtitle: string;
+  onBack(): void;
+  onDevices(): void;
+}) {
+  const cast = useCast();
+  const bg = backdropUrl(item, 1920) || landscapeUrl(item, 1280);
+  const dur = cast.duration || (item.RunTimeTicks ? item.RunTimeTicks / TPS : 0);
+  const name = cast.device ? cast.device.name : '';
+  const busy = cast.loading || cast.state === 'BUFFERING';
+  return (
+    <div className="castremote">
+      {bg && <div className="castremote__bg" style={{ backgroundImage: `url("${bg}")` }} />}
+      <div className="player__top">
+        <button className="pbtn" onClick={onBack} aria-label={t('common.back')}>
+          <I.ArrowLeft />
+        </button>
+        <div className="player__titles">
+          <div className="player__title">{title}</div>
+          {subtitle && <div className="player__subtitle">{subtitle}</div>}
+        </div>
+      </div>
+
+      <div className="castremote__center">
+        <div className="castremote__device">
+          <I.Cast />
+          <span>{cast.loading ? t('cast.loading', { name }) : t('cast.playingOn', { name })}</span>
+        </div>
+        <div className="castremote__controls">
+          <button className="pbtn pbtn--lg" onClick={() => castSeekBy(-10)} aria-label={t('player.rewind')}>
+            <I.Rewind10 />
+          </button>
+          <button
+            className="pbtn pbtn--xl"
+            onClick={castTogglePlay}
+            disabled={cast.loading}
+            aria-label={cast.state === 'PAUSED' ? t('player.play') : t('player.pause')}
+            autoFocus
+          >
+            {busy ? <Spinner /> : cast.state === 'PAUSED' ? <I.Play /> : <I.Pause />}
+          </button>
+          <button className="pbtn pbtn--lg" onClick={() => castSeekBy(10)} aria-label={t('player.forward')}>
+            <I.Forward10 />
+          </button>
+        </div>
+        {cast.state === 'PAUSED' && <div className="castremote__state">{t('cast.paused')}</div>}
+      </div>
+
+      <div className="player__bottom">
+        <div className="player__timeline">
+          <span className="player__time">{formatClock(cast.time)}</span>
+          <Scrubber time={cast.time} duration={dur} buffered={0} onSeek={(s) => castControl({ type: 'SEEK', time: s })} thumb={() => null} />
+          <span className="player__time">-{formatClock(Math.max(0, dur - cast.time))}</span>
+        </div>
+        <div className="player__bar">
+          <div className="player__bar-side">
+            {!isMobile && (
+              <input
+                className="volume"
+                type="range"
+                min={0}
+                max={1}
+                step={0.02}
+                value={cast.muted ? 0 : cast.volume}
+                style={{ '--v': `${(cast.muted ? 0 : cast.volume) * 100}%` } as CSSProperties}
+                aria-label={t('player.volume')}
+                onChange={(e) => castControl({ type: 'VOLUME', level: Number(e.target.value) })}
+              />
+            )}
+          </div>
+          <div className="player__bar-side">
+            <button className="pbtn is-on" onClick={onDevices} aria-label={t('cast.button')} title={t('cast.button')}>
+              <I.Cast />
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
