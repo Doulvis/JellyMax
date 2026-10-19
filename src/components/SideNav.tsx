@@ -5,7 +5,7 @@ import { isBackKey, isMobile } from '../platform';
 import { useAuth } from '../state/auth';
 import { AvatarPicker } from './AvatarPicker';
 import { Avatar, LogoMark } from './Common';
-import { Film, Gear, Heart, Home, Logout, Pencil, Search, Tv, Users } from './Icons';
+import { ChevronLeft, Film, Gear, Heart, Home, Logout, Pencil, Search, Tv, Users } from './Icons';
 
 const ITEMS = [
   { to: '/search', key: 'nav.search', Icon: Search, end: false },
@@ -16,7 +16,40 @@ const ITEMS = [
 ] as const;
 
 // Ordre des onglets sur mobile : l'accueil en premier, comme les applications de streaming.
-const TAB_ITEMS = [ITEMS[1], ITEMS[0], ITEMS[2], ITEMS[3], ITEMS[4]];
+const TAB_ITEMS = [ITEMS[1], ITEMS[2], ITEMS[3], ITEMS[4], ITEMS[0]];
+const TAB_PATHS = ['/', '/search', '/movies', '/shows', '/mylist', '/settings'];
+
+/**
+ * Mobile : la barre du haut devient opaque dès qu'on fait défiler, et la barre d'onglets flottante
+ * se cache quand on descend dans la page puis réapparaît dès qu'on remonte.
+ */
+function useScrollChrome(enabled: boolean) {
+  const [solid, setSolid] = useState(false);
+  const [hidden, setHidden] = useState(false);
+  useEffect(() => {
+    if (!enabled) return;
+    let last = window.scrollY;
+    let raf = 0;
+    const run = () => {
+      raf = 0;
+      const y = window.scrollY;
+      setSolid(y > 24);
+      if (y < 120) setHidden(false);
+      else if (Math.abs(y - last) > 10) setHidden(y > last);
+      if (Math.abs(y - last) > 10 || y < 120) last = y;
+    };
+    const onScroll = () => {
+      if (!raf) raf = requestAnimationFrame(run);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    run();
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, [enabled]);
+  return { solid, hidden };
+}
 
 /** Barre de navigation verticale façon HBO Max : icônes, qui s'élargit au survol / au focus. */
 export function SideNav() {
@@ -26,6 +59,7 @@ export function SideNav() {
   const [editAvatar, setEditAvatar] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const { pathname } = useLocation();
+  const chrome = useScrollChrome(isMobile);
 
   // Le menu du profil se referme quand on change de page.
   useEffect(() => setMenu(false), [pathname]);
@@ -102,26 +136,47 @@ export function SideNav() {
     />
   );
 
-  // Téléphones et tablettes : barre d'onglets en bas de l'écran, à portée de pouce.
+  // Téléphones et tablettes : barre du haut (logo ou retour, profil) et barre d'onglets flottante
+  // au centre en bas de l'écran, à portée de pouce.
   if (isMobile) {
+    const isRoot = TAB_PATHS.indexOf(pathname) >= 0;
+    const goBack = () => {
+      const state = window.history.state as { idx?: number } | null;
+      if (state && state.idx) navigate(-1);
+      else navigate('/', { replace: true });
+    };
     return (
       <>
-        <nav className="tabbar">
+        <header className={`topbar ${chrome.solid ? 'is-solid' : ''}`}>
+          {isRoot ? (
+            <Link to="/" replace className="logo topbar__logo" aria-label={t('nav.home')}>
+              <LogoMark />
+              <span>
+                Jelly<b>MAX</b>
+              </span>
+            </Link>
+          ) : (
+            <button className="topbar__btn" onClick={goBack} aria-label={t('common.back')}>
+              <ChevronLeft />
+            </button>
+          )}
+          <button
+            className="topbar__profile"
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={() => setMenu((m) => !m)}
+            aria-label={t('nav.profile')}
+            aria-expanded={menu}
+          >
+            <Avatar userId={session.userId} tag={session.userImageTag} name={session.userName} size="sm" />
+          </button>
+        </header>
+        <nav className={`tabbar ${chrome.hidden && !menu ? 'is-hidden' : ''}`}>
           {TAB_ITEMS.map(({ to, key, Icon, end }) => (
-            <NavLink key={to} to={to} end={end} replace className="tabbar__item">
+            <NavLink key={to} to={to} end={end} replace className="tabbar__item" aria-label={t(key)}>
               <Icon />
               <span>{t(key)}</span>
             </NavLink>
           ))}
-          <button
-            className={`tabbar__item ${menu ? 'active' : ''}`}
-            onMouseDown={(e) => e.stopPropagation()}
-            onClick={() => setMenu((m) => !m)}
-            aria-expanded={menu}
-          >
-            <Avatar userId={session.userId} tag={session.userImageTag} name={session.userName} size="sm" />
-            <span>{t('nav.profile')}</span>
-          </button>
         </nav>
         {menu && (
           <>
