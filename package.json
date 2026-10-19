@@ -1,7 +1,7 @@
 {
   "name": "jellymax",
   "productName": "JellyMax",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Client Jellyfin pour Windows au design inspiré de HBO Max",
   "author": "JellyMax",
   "private": true,

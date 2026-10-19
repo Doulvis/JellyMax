@@ -2983,13 +2983,76 @@ html.is-tv {
   -webkit-backdrop-filter: none !important;
   backdrop-filter: none !important;
 }
-.is-tv .ambient {
+/* Pas d'animations ni de transitions : chaque image calculée en moins rend la télécommande plus réactive.
+   Seul l'agrandissement de la carte sélectionnée reste animé (transformation gérée par le GPU). */
+.is-tv *,
+.is-tv *::before,
+.is-tv *::after {
+  animation: none !important;
+  transition: none !important;
+}
+.is-tv body {
+  text-rendering: auto;
+}
+/* Masques et ombres portées floues : très lents sur TV. */
+.is-tv .rail__track,
+.is-tv .hero__bg,
+.is-tv .detail__backdrop,
+.is-tv .cast--rail,
+.is-tv .sidenav-shade {
+  -webkit-mask-image: none !important;
+  mask-image: none !important;
+}
+.is-tv .logo-mark,
+.is-tv .sidenav__item.active svg,
+.is-tv .hero__logo,
+.is-tv .detail__logo,
+.is-tv .card__brand img {
+  filter: none;
+}
+.is-tv .rail__track {
+  scroll-snap-type: none;
+}
+.is-tv .ambient,
+.is-tv .card__frame::after,
+.is-tv .rail__arrow,
+.is-tv .drag-strip {
   display: none;
+}
+.is-tv .app-main {
+  background: var(--bg);
+}
+/* Sans masque, le bas de la bannière se fond dans le noir par un dégradé. */
+.is-tv .hero__shade,
+.is-tv .detail__shade {
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.5) 34%, rgba(0, 0, 0, 0) 62%),
+    linear-gradient(0deg, #000 0%, rgba(0, 0, 0, 0.6) 22%, rgba(0, 0, 0, 0) 50%);
 }
 .is-tv .hero__bg img,
 .is-tv .hero__bg.is-active img {
   transform: none;
-  transition: none;
+}
+/* Barre latérale : voile uni, pas d'animation de largeur. */
+.is-tv .sidenav:focus-within + .sidenav-shade,
+.is-tv .sidenav.is-open + .sidenav-shade {
+  width: 30rem;
+  background: linear-gradient(90deg, rgba(4, 8, 14, 0.97) 0%, rgba(4, 8, 14, 0.9) 55%, rgba(4, 8, 14, 0) 100%);
+}
+/* Carte sélectionnée : agrandissement + contour net (sans ombre floue). */
+.is-tv .card__frame {
+  transition: transform 0.12s ease-out !important;
+}
+.is-tv .card:focus .card__frame,
+.is-tv .card:hover .card__frame {
+  transform: scale(1.06);
+  box-shadow: 0 0 0 3px #000, 0 0 0 6px #fff;
+}
+.is-tv .genre-tile:focus,
+.is-tv .profile-tile:focus .avatar {
+  box-shadow: 0 0 0 3px #000, 0 0 0 6px #fff;
+}
+.is-tv .skeleton .card__frame {
+  background: #12121c;
 }
 .is-tv .glass,
 .is-tv .menu,

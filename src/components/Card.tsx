@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { landscapeImage, logoUrl, posterUrl } from '../api/images';
 import type { BaseItem } from '../api/types';
 import { t } from '../i18n';
+import { isTV } from '../platform';
 import { episodeCode, remainingLabel } from '../utils/format';
 import { Check, Play } from './Icons';
 
@@ -22,7 +23,13 @@ function titles(item: BaseItem, action: 'detail' | 'play'): [string, string] {
   return [item.Name, item.ProductionYear ? String(item.ProductionYear) : ''];
 }
 
-export function Card({
+// TV : images juste à la taille affichée (les cartes font ~400 px de large en 1080p), décodage plus rapide.
+const POSTER_W = isTV ? 260 : 360;
+const LANDSCAPE_W = isTV ? 440 : 640;
+const LOGO_W = isTV ? 280 : 400;
+
+/** Mémorisée : un carrousel qui se met à jour ne redessine pas toutes ses cartes. */
+export const Card = memo(function Card({
   item,
   variant = 'landscape',
   action = 'detail',
@@ -43,13 +50,13 @@ export function Card({
   let src: string | null = null;
   let needsBrand = false;
   if (variant === 'poster') {
-    src = posterUrl(item, 360);
+    src = posterUrl(item, POSTER_W);
   } else {
-    const img = landscapeImage(item, 640);
+    const img = landscapeImage(item, LANDSCAPE_W);
     src = img ? img.url : null;
     needsBrand = item.Type !== 'Episode' && (!img || img.kind === 'backdrop' || imgFailed);
   }
-  const logo = needsBrand && !logoFailed ? logoUrl(item, 400) : null;
+  const logo = needsBrand && !logoFailed ? logoUrl(item, LOGO_W) : null;
   const withMeta = showTitle || action === 'play' || item.Type === 'Episode';
 
   return (
@@ -87,7 +94,7 @@ export function Card({
       )}
     </Link>
   );
-}
+});
 
 export function ItemGrid({ items, variant = 'landscape', showTitle }: { items: BaseItem[]; variant?: CardVariant; showTitle?: boolean }) {
   return (

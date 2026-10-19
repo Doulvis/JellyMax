@@ -27,7 +27,7 @@ declare global {
 }
 
 export const APP_NAME = 'JellyMax';
-export const APP_VERSION = '1.0.0';
+export const APP_VERSION = '1.0.1';
 
 export const isElectron = typeof window !== 'undefined' && !!window.jellymax;
 /** Application installée sur une TV Samsung (API Tizen disponibles). */

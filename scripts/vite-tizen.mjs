@@ -1,4 +1,5 @@
 // Build TV Samsung (Tizen) : `vite build --mode tizen` produit dist-tizen/, prêt à être empaqueté en .wgt.
+//  - hls.js retiré (lecteur HLS natif de la TV) ;
 //  - un seul script classique (pas de module ES : les anciennes TV les refusent en file://) ;
 //  - JavaScript et CSS ramenés au niveau de Chromium 69 (TV 2020) ;
 //  - `:focus-visible` remplacé par `:focus` (tout passe par la télécommande) ;
@@ -16,7 +17,11 @@ export function tizenPlugin() {
     name: 'jellymax-tizen',
     enforce: 'post',
     apply: (_config, env) => env.mode === 'tizen',
-    config: () => ({
+    config: (config) => ({
+      resolve: {
+        // Lecture HLS native sur TV : hls.js est remplacé par un module vide.
+        alias: { 'hls.js': path.resolve(config.root || process.cwd(), 'src/hls-stub.ts') },
+      },
       build: {
         outDir: TIZEN_OUT_DIR,
         target: TARGET,

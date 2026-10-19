@@ -9,6 +9,7 @@ import { Dropdown, Empty, ErrorState, PageLoader, Spinner, Tabs } from '../compo
 import { MetaLine } from '../components/Hero';
 import { Check, Eye, Film, Heart, HeartFill, Play, Restart } from '../components/Icons';
 import { t } from '../i18n';
+import { isTV } from '../platform';
 import {
   episodeCode,
   errorMessage,
@@ -195,9 +196,10 @@ function ItemView({ item, initialSeason }: { item: BaseItem; initialSeason: stri
     }
   };
 
-  const bd = backdropUrl(item);
-  const logo = isEpisode ? null : logoUrl(item);
-  const trailer = item.RemoteTrailers && item.RemoteTrailers[0] && item.RemoteTrailers[0].Url;
+  const bd = backdropUrl(item, isTV ? 1280 : 1920);
+  const logo = isEpisode ? null : logoUrl(item, isTV ? 500 : 700);
+  // TV : pas de navigateur pour ouvrir les bandes-annonces externes.
+  const trailer = !isTV && item.RemoteTrailers && item.RemoteTrailers[0] && item.RemoteTrailers[0].Url;
   const badges = qualityBadge(item);
 
   const tabs: { key: TabKey; label: string }[] = [];
@@ -208,7 +210,7 @@ function ItemView({ item, initialSeason }: { item: BaseItem; initialSeason: stri
 
   return (
     <div className="detail">
-      {bd && (
+      {bd && !isTV && (
         <div className="ambient ambient--detail" aria-hidden="true">
           <img src={backdropUrl(item, 480) || bd} alt="" className="is-active" />
         </div>

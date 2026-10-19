@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { BaseItem } from '../api/types';
 import { t } from '../i18n';
+import { isTV } from '../platform';
 import { Card, type CardVariant } from './Card';
 import { ChevronLeft, ChevronRight } from './Icons';
 
@@ -27,6 +28,8 @@ export function Rail({ title, items, variant = 'landscape', action = 'detail', t
   }, []);
 
   useEffect(() => {
+    // TV : pas de flèches de défilement (télécommande), donc rien à suivre pendant le défilement.
+    if (isTV) return;
     update();
     const el = ref.current;
     if (!el) return;

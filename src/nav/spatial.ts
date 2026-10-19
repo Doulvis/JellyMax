@@ -8,13 +8,12 @@ type Dir = 'up' | 'down' | 'left' | 'right';
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select, textarea, [tabindex]';
 const KEY_DIR: Record<string, Dir> = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' };
 
-function isCandidate(el: HTMLElement): boolean {
-  if (el.getAttribute('tabindex') === '-1') return false;
-  if (el.closest('[data-nav-hidden]')) return false;
-  const r = el.getBoundingClientRect();
-  if (r.width < 2 || r.height < 2) return false;
-  return getComputedStyle(el).visibility !== 'hidden';
+interface Cand {
+  el: HTMLElement;
+  r: DOMRect;
 }
+
+const SIDENAV = '.sidenav';
 
 /** Un conteneur [data-nav-scope] (menu, panneau…) restreint la navigation à son contenu. */
 function scopeRoot(): ParentNode {
@@ -22,20 +21,37 @@ function scopeRoot(): ParentNode {
   return scopes.length ? scopes[scopes.length - 1] : document;
 }
 
-function candidates(): HTMLElement[] {
-  return Array.prototype.slice.call(scopeRoot().querySelectorAll<HTMLElement>(FOCUSABLE)).filter(isCandidate);
+/**
+ * Éléments focalisables visibles, avec leur position (lue une seule fois par appui de touche).
+ * Pas de getComputedStyle : trop coûteux sur TV avec des centaines de cartes.
+ */
+function candidates(root: ParentNode = scopeRoot()): Cand[] {
+  const nodes = root.querySelectorAll<HTMLElement>(FOCUSABLE);
+  const hasHidden = !!document.querySelector('[data-nav-hidden]');
+  const out: Cand[] = [];
+  for (let i = 0; i < nodes.length; i++) {
+    const el = nodes[i];
+    if (el.getAttribute('tabindex') === '-1') continue;
+    if (hasHidden && el.closest('[data-nav-hidden]')) continue;
+    const r = el.getBoundingClientRect();
+    if (r.width < 2 || r.height < 2) continue;
+    out.push({ el, r });
+  }
+  return out;
 }
 
-function inViewport(el: HTMLElement) {
-  const r = el.getBoundingClientRect();
+function rectInViewport(r: DOMRect) {
   return r.bottom > 0 && r.top < window.innerHeight && r.right > 0 && r.left < window.innerWidth;
 }
 
 function focusEl(el: HTMLElement, dir: Dir | null, instant: boolean) {
+  if (!el.closest(SIDENAV)) lastMain = el;
   el.focus({ preventScroll: true });
   const vertical = dir === 'up' || dir === 'down';
+  // TV : défilement immédiat, l'animation fluide est trop coûteuse pour le processeur des TV.
+  const behavior = instant || isTV ? 'auto' : 'smooth';
   try {
-    el.scrollIntoView({ block: vertical ? 'center' : 'nearest', inline: 'nearest', behavior: instant ? 'auto' : 'smooth' });
+    el.scrollIntoView({ block: vertical ? 'center' : 'nearest', inline: 'nearest', behavior });
   } catch {
     el.scrollIntoView(false);
   }
@@ -47,23 +63,16 @@ function overlapGap(a1: number, a2: number, b1: number, b2: number) {
   return 0;
 }
 
-export function moveFocus(dir: Dir, instant = false): boolean {
-  const list = candidates();
-  if (!list.length) return false;
-  const cur = document.activeElement as HTMLElement | null;
-  if (!cur || cur === document.body || list.indexOf(cur) < 0) {
-    focusEl(list.find(inViewport) || list[0], null, instant);
-    return true;
-  }
-  const c = cur.getBoundingClientRect();
+/** Dernier élément focalisé hors de la barre latérale : on y revient avec ▶. */
+let lastMain: HTMLElement | null = null;
+
+function pick(list: Cand[], cur: HTMLElement, c: DOMRect, dir: Dir): HTMLElement | null {
   const cx = c.left + c.width / 2;
   const cy = c.top + c.height / 2;
   let best: HTMLElement | null = null;
   let bestScore = Infinity;
-
-  for (const el of list) {
+  for (const { el, r } of list) {
     if (el === cur || el.contains(cur) || cur.contains(el)) continue;
-    const r = el.getBoundingClientRect();
     const x = r.left + r.width / 2;
     const y = r.top + r.height / 2;
     let score: number;
@@ -82,6 +91,68 @@ export function moveFocus(dir: Dir, instant = false): boolean {
       best = el;
     }
   }
+  return best;
+}
+
+/** Carte voisine dans le même carrousel : réponse immédiate, sans parcourir la page. */
+function railSibling(cur: HTMLElement, dir: Dir): HTMLElement | null {
+  if (dir !== 'left' && dir !== 'right') return null;
+  const track = cur.parentElement;
+  if (!track || !track.classList.contains('rail__track')) return null;
+  const next = (dir === 'right' ? cur.nextElementSibling : cur.previousElementSibling) as HTMLElement | null;
+  return next && next.matches(FOCUSABLE) ? next : null;
+}
+
+export function moveFocus(dir: Dir, instant = false): boolean {
+  const cur = document.activeElement as HTMLElement | null;
+  const hasCur = !!cur && cur !== document.body && document.body.contains(cur);
+
+  if (hasCur) {
+    const sib = railSibling(cur!, dir);
+    if (sib) {
+      focusEl(sib, dir, instant);
+      return true;
+    }
+  }
+
+  const scope = scopeRoot();
+  const inSide = hasCur && scope === document && !!cur!.closest(SIDENAV);
+
+  // Dans la barre latérale : ▲ ▼ restent dans la barre, ▶ revient au contenu.
+  if (inSide && dir === 'right') {
+    if (lastMain && document.body.contains(lastMain) && rectInViewport(lastMain.getBoundingClientRect())) {
+      focusEl(lastMain, null, true);
+      return true;
+    }
+    const main = document.querySelector('main');
+    const list = main ? candidates(main).filter((c) => rectInViewport(c.r)) : [];
+    if (list.length) {
+      focusEl(list[0].el, null, true);
+      return true;
+    }
+    return false;
+  }
+
+  let list = inSide ? candidates(document.querySelector(SIDENAV)!) : candidates(scope);
+  if (!list.length) return false;
+  if (!hasCur || !list.some((c) => c.el === cur)) {
+    const first = list.find((c) => rectInViewport(c.r) && !c.el.closest(SIDENAV)) || list.find((c) => rectInViewport(c.r)) || list[0];
+    focusEl(first.el, null, instant);
+    return true;
+  }
+  // Hors de la barre latérale, seule ◀ peut y entrer (▲ ▼ ne doivent jamais l'ouvrir).
+  if (!inSide && scope === document) {
+    const content = list.filter((c) => !c.el.closest(SIDENAV));
+    if (dir !== 'left') list = content;
+    else {
+      const target = pick(content, cur!, cur!.getBoundingClientRect(), dir);
+      if (target) {
+        focusEl(target, dir, instant);
+        return true;
+      }
+    }
+  }
+  const best = pick(list, cur!, cur!.getBoundingClientRect(), dir);
   if (!best) return false;
   focusEl(best, dir, instant);
   return true;
@@ -101,12 +172,12 @@ function ensureFocus() {
   if (cur && cur !== document.body && document.body.contains(cur)) return;
   const list = candidates();
   if (!list.length) return;
-  const visible = list.filter(inViewport);
+  const visible = list.filter((c) => rectInViewport(c.r)).map((c) => c.el);
   const preferred =
     visible.find((el) => el.hasAttribute('data-autofocus')) ||
     visible.find((el) => !!el.closest('main')) ||
     visible[0] ||
-    list[0];
+    list[0].el;
   focusEl(preferred, null, true);
 }
 
@@ -148,6 +219,8 @@ function initTvTextFields() {
     true,
   );
 }
+
+let lastRepeat = 0;
 
 export function initSpatialNav() {
   // Mode "clavier / télécommande" : certains effets (ex. barre latérale ouverte au focus) ne s'appliquent qu'à ce mode.
@@ -191,6 +264,15 @@ export function initSpatialNav() {
             if (dir === 'right' && start < input.value.length) return;
           }
         }
+      }
+      // Touche maintenue : on limite la cadence pour que la TV ne prenne pas de retard sur la télécommande.
+      if (e.repeat && isTV) {
+        const now = Date.now();
+        if (now - lastRepeat < 110) {
+          e.preventDefault();
+          return;
+        }
+        lastRepeat = now;
       }
       if (moveFocus(dir, e.repeat)) e.preventDefault();
       return;

@@ -5,7 +5,10 @@ import { resolvePlayable } from '../api/playable';
 import type { BaseItem } from '../api/types';
 import { t } from '../i18n';
 import { formatRuntime, yearLabel } from '../utils/format';
+import { isTV } from '../platform';
 import { Info, Play } from './Icons';
+
+const HERO_WIDTH = isTV ? 1280 : 1920;
 
 export function MetaLine({ item }: { item: BaseItem }) {
   const parts: ReactNode[] = [];
@@ -51,15 +54,28 @@ export function Hero({ items }: { items: BaseItem[] }) {
   const [busy, setBusy] = useState(false);
   const navigate = useNavigate();
 
+  const [wait, setWait] = useState(0);
+
   useEffect(() => {
     if (paused || items.length < 2) return;
-    const t = setTimeout(() => setIndex((i) => (i + 1) % items.length), 9000);
+    const t = setTimeout(() => {
+      // TV : pas de changement de bannière (et de décodage d'image) quand elle est hors de l'écran.
+      if (isTV && window.scrollY > window.innerHeight * 0.5) setWait((w) => w + 1);
+      else setIndex((i) => (i + 1) % items.length);
+    }, 9000);
     return () => clearTimeout(t);
-  }, [index, paused, items.length]);
+  }, [index, paused, items.length, wait]);
+
+  // TV : on précharge l'image suivante pour un changement instantané.
+  useEffect(() => {
+    if (!isTV || items.length < 2) return;
+    const next = backdropUrl(items[(index + 1) % items.length], HERO_WIDTH);
+    if (next) new Image().src = next;
+  }, [index, items]);
 
   const item = items[index];
   if (!item) return null;
-  const logo = logoUrl(item);
+  const logo = logoUrl(item, isTV ? 500 : 700);
 
   const play = async () => {
     if (busy) return;
@@ -85,7 +101,9 @@ export function Hero({ items }: { items: BaseItem[] }) {
       onBlur={() => setPaused(false)}
     >
       {items.map((it, i) => {
-        const bd = backdropUrl(it);
+        // TV : une seule grande image en mémoire (celle affichée), sans fondu enchaîné.
+        if (isTV && i !== index) return null;
+        const bd = backdropUrl(it, HERO_WIDTH);
         return (
           <div key={it.Id} className={`hero__bg ${i === index ? 'is-active' : ''}`} aria-hidden={i !== index}>
             {bd && <img src={bd} alt="" />}
