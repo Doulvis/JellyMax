@@ -12,7 +12,7 @@ import Profiles from './pages/Profiles';
 import SearchPage from './pages/Search';
 import ServerConnect from './pages/ServerConnect';
 import SettingsPage from './pages/Settings';
-import { isBackKey } from './platform';
+import { exitApp, isBackKey, isTV, keyName } from './platform';
 import { AuthProvider, useAuth } from './state/auth';
 
 // Le lecteur (et hls.js) n'est chargé qu'à la première lecture : démarrage plus rapide.
@@ -48,7 +48,12 @@ function BackHandler() {
       if (e.defaultPrevented) return;
       if (isBackKey(e) || (e.altKey && e.key === 'ArrowLeft')) {
         e.preventDefault();
-        navigate(-1);
+        // TV : "Retour" sur le premier écran ferme l'application, comme les applications Samsung.
+        const state = window.history.state as { idx?: number } | null;
+        if (isTV && (!state || !state.idx)) exitApp();
+        else navigate(-1);
+      } else if (isTV && keyName(e) === 'Exit') {
+        exitApp();
       }
     };
     const onMouse = (e: MouseEvent) => {

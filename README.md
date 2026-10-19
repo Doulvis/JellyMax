@@ -5,75 +5,106 @@
 <h1 align="center">JellyMax</h1>
 
 <p align="center">
-  Un client <a href="https://jellyfin.org">Jellyfin</a> pour Windows, au design inspiré de HBO Max.
+  An HBO Max-inspired <a href="https://jellyfin.org">Jellyfin</a> client for Windows and Samsung TVs (Tizen).
 </p>
 
 ---
 
-## Fonctionnalités
+## Features
 
-- **Plusieurs profils** : ajoutez autant de comptes que vous voulez, même sur des serveurs différents, puis choisissez-en un au lancement (« Qui regarde ? »). Vous pouvez aussi ouvrir directement le dernier profil utilisé.
-- **Avatars synchronisés** : choisissez votre avatar dans la galerie de votre serveur Jellyfin (plugin [GetAvatar](https://github.com/cedev-1/jellyfin-plugin-GetAvatar)) ou importez une image. L'avatar devient votre photo de profil Jellyfin, partout.
-- **Accueil** : grande bannière, Reprendre la lecture, À suivre, recommandations basées sur ce que vous avez regardé, nouveautés, Ma liste, mieux notés, genres.
-- **Films et Séries** : reprise, recommandations, nouveautés, un carrousel par genre, puis le catalogue complet avec tri, filtres et genres.
-- **Recherche** dans tout le catalogue : films, séries, épisodes, collections, acteurs et genres.
-- **Ma liste** : vos médias favoris.
-- **Lecteur** :
-  - lecture directe, remux ou transcodage décidés par le serveur selon les codecs de votre PC (H.264, HEVC, AV1, VP9…), avec repli automatique en cas d'échec ;
-  - pistes audio, sous-titres et qualité ;
-  - « Passer l'intro » et « Épisode suivant » ;
-  - aperçus d'images sur la barre de progression ;
-  - reprise synchronisée avec le serveur.
-- **Sous-titres personnalisables** : taille, couleur, fond, contour, position et police.
-- **Français et anglais**.
+- **Multiple profiles**: add as many accounts as you like, even on different servers, and pick one at launch ("Who's watching?"). You can also skip the picker and reopen the last profile.
+- **Synced avatars**: choose your avatar from your Jellyfin server's gallery ([GetAvatar](https://github.com/cedev-1/jellyfin-plugin-GetAvatar) plugin) or upload an image (Windows). It becomes your Jellyfin profile picture everywhere.
+- **Home**: large hero banner, Continue Watching, Next Up, recommendations based on what you watched, new releases, My List, top rated, genres.
+- **Movies and Shows**: continue watching, recommendations, new releases, one row per genre, then the full catalog with sorting, filters and genres.
+- **Search** across the whole library: movies, shows, episodes, collections, people and genres.
+- **My List**: your favorites.
+- **Player**:
+  - direct play, remux or transcode, chosen by the server based on what the device can decode (H.264, HEVC, AV1, VP9…), with automatic fallback on failure;
+  - audio, subtitle and quality selection;
+  - "Skip intro" and "Next episode";
+  - trickplay thumbnails on the seek bar;
+  - playback position synced with the server.
+- **Customizable subtitles**: size, color, background, outline, position and font.
+- **French and English**.
 
-Nécessite **Jellyfin 10.9 ou plus récent**.
+Requires **Jellyfin 10.9 or newer**.
 
-## Installation
+## Windows
 
-Téléchargez l'installeur `JellyMax-Setup-x.y.z.exe` (ou la version portable) depuis la page *Releases*, puis lancez-le.
+### Install
 
-L'application n'étant pas signée, Windows SmartScreen peut afficher un avertissement : cliquez sur *Informations complémentaires* puis *Exécuter quand même*.
+Download `JellyMax-Setup-x.y.z.exe` (or the portable version) from the *Releases* page and run it.
 
-Au premier lancement, saisissez l'adresse de votre serveur Jellyfin (par exemple `http://192.168.1.20:8096`) puis connectez-vous.
+The app is not code-signed, so Windows SmartScreen may show a warning: click *More info* then *Run anyway*.
 
-## Raccourcis
+On first launch, enter your Jellyfin server address (for example `http://192.168.1.20:8096`) and sign in.
 
-| Touche | Action |
+### Keyboard shortcuts
+
+| Key | Action |
 | --- | --- |
-| Espace / K | Lecture / pause |
-| ← / → | Reculer / avancer de 10 s |
+| Space / K | Play / pause |
+| ← / → | Back / forward 10 s |
 | ↑ / ↓ | Volume |
-| F | Plein écran du lecteur |
-| M | Couper le son |
-| Échap | Quitter le lecteur |
-| F11 | Plein écran de l'application |
+| F | Player fullscreen |
+| M | Mute |
+| Esc | Exit the player |
+| F11 | App fullscreen |
 
-## Développement
+## Samsung TV (Tizen)
 
-Prérequis : [Node.js](https://nodejs.org) 20 ou plus récent.
+Supports Samsung TVs from **2020 onwards** (Tizen 5.5+). The interface is fully usable with the remote: arrows to move, OK to select, Back to go back (Back on the first screen closes the app). In the player, ◀ / ▶ skip 10 s when the controls are hidden; the play/pause, stop, rewind and fast-forward keys are supported.
+
+### Install on your TV
+
+Samsung only allows apps from outside the store to be installed in developer mode, signed with your own certificate.
+
+1. **Enable developer mode on the TV**: open *Apps*, type `1 2 3 4 5` on the remote, turn *Developer mode* on, enter your PC's IP address, then restart the TV.
+2. **Install [Tizen Studio](https://developer.samsung.com/smarttv/develop/getting-started/setting-up-sdk/installing-tv-sdk.html)** with, in the Package Manager, *Samsung Certificate Extension* and the *TV Extensions* tools.
+3. **Create a certificate**: in Tizen Studio, *Tools → Certificate Manager → +*, choose *Samsung*, *TV*, then sign in with a Samsung account. Add your TV's DUID (shown when the TV is connected through *Device Manager*).
+4. **Build, package and install**:
+
+   ```powershell
+   npm install
+   npm run tizen:package                 # builds and signs release/JellyMax-x.y.z.wgt
+   npm run tizen:install -- 192.168.1.50 # your TV's IP address
+   ```
+
+   If Tizen Studio is not installed in `C:\tizen-studio` or `%USERPROFILE%\tizen-studio`, set the `TIZEN_STUDIO` environment variable. To use a certificate profile other than the active one, set `TIZEN_PROFILE`.
+
+JellyMax then appears in the TV's app list.
+
+## Development
+
+Requirements: [Node.js](https://nodejs.org) 20 or newer.
 
 ```powershell
 npm install
-npm run dev        # application Electron avec rechargement à chaud
-npm run dist       # installeur + version portable dans release/
+npm run dev           # Electron app with hot reload
+npm run dist          # Windows installer + portable build in release/
+npm run build:tizen   # Samsung TV app in dist-tizen/
 ```
 
 ### Structure
 
 ```
-electron/          processus principal (fenêtre, plein écran, anti-veille)
-src/api/           client Jellyfin, profil de lecture, recommandations
-src/components/    interface (barre latérale, carrousels, cartes, avatars…)
-src/pages/         écrans (profils, accueil, films, séries, fiche, lecteur…)
-src/state/         profils et paramètres
-src/i18n.ts        traductions français / anglais
+electron/          Windows main process (window, fullscreen, sleep prevention)
+tizen/             Samsung TV manifest (config.xml) and icon
+scripts/           dev launcher, Tizen build and packaging
+src/api/           Jellyfin client, device profile, recommendations
+src/components/    UI (sidebar, rows, cards, avatars…)
+src/pages/         screens (profiles, home, movies, shows, details, player…)
+src/nav/           spatial navigation (keyboard and TV remote)
+src/state/         profiles and settings
+src/i18n.ts        French / English translations
 ```
 
-## Vie privée
+The TV build uses the same code as Windows: `vite build --mode tizen` produces a single classic script targeting the TV browser (Chromium 69+), and adapts the stylesheet for older TVs.
 
-JellyMax ne contient aucune donnée de serveur ou d'utilisateur. Les adresses de serveur, les profils et les jetons de connexion sont stockés uniquement sur votre PC, dans le dossier de données de l'application (`%APPDATA%\JellyMax`). L'application ne communique qu'avec les serveurs Jellyfin que vous ajoutez.
+## Privacy
+
+JellyMax ships with no server or user data. Server addresses, profiles and access tokens are stored only on your device (on Windows, in `%APPDATA%\JellyMax`). The app only talks to the Jellyfin servers you add.
 
 ---
 
-JellyMax est un projet indépendant, sans lien avec Jellyfin ni avec HBO Max. Distribué sous licence [MIT](LICENSE).
+JellyMax is an independent project, not affiliated with Jellyfin or HBO Max. Released under the [MIT](LICENSE) license.

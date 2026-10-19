@@ -1,6 +1,8 @@
 // Construit le "DeviceProfile" envoyé à Jellyfin en détectant ce que le moteur vidéo sait décoder.
 // Le serveur s'en sert pour choisir : lecture directe, remux (direct stream) ou transcodage.
 
+import { isTizen } from '../platform';
+
 let probe: HTMLVideoElement | null = null;
 
 function canPlay(type: string): boolean {
@@ -55,6 +57,15 @@ export function getCapabilities(): Capabilities {
     eac3: canPlay('audio/mp4; codecs="ec-3"'),
     mkv: canPlay('video/x-matroska; codecs="avc1.640029"'),
   };
+  if (isTizen) {
+    // Le lecteur des TV Samsung lit MKV, HEVC, AC3 / E-AC3… sans toujours l'annoncer via canPlayType.
+    cached.mkv = true;
+    cached.hevc = true;
+    cached.ac3 = true;
+    cached.eac3 = true;
+    cached.mp3 = true;
+    cached.flac = true;
+  }
   return cached;
 }
 
@@ -73,12 +84,26 @@ export function buildDeviceProfile(maxBitrate: number) {
   ];
   if (webmVideo) directPlay.push({ Container: 'webm', Type: 'Video', VideoCodec: webmVideo, AudioCodec: webmAudio });
   if (c.mkv) directPlay.push({ Container: 'mkv', Type: 'Video', VideoCodec: mkvVideo, AudioCodec: mp4Audio + ',vorbis' });
+  if (isTizen) directPlay.push({ Container: 'ts,mpegts,m2ts', Type: 'Video', VideoCodec: 'h264,hevc,mpeg2video', AudioCodec: mp4Audio });
   directPlay.push({ Container: 'mp3', Type: 'Audio' }, { Container: 'aac,m4a', Type: 'Audio' });
 
   // HLS : fMP4 si HEVC disponible (permet la copie du flux HEVC), sinon MPEG-TS H.264, le plus universel.
   const hlsAudio = ['aac', c.mp3 && 'mp3', c.ac3 && 'ac3', c.eac3 && 'eac3'].filter(Boolean).join(',');
   const transcoding = [
-    c.hevc
+    isTizen
+      ? {
+          // Lecteur HLS natif de la TV : MPEG-TS, H.264 ou HEVC copié tel quel.
+          Container: 'ts',
+          Type: 'Video',
+          AudioCodec: hlsAudio,
+          VideoCodec: 'h264,hevc',
+          Context: 'Streaming',
+          Protocol: 'hls',
+          MaxAudioChannels: '6',
+          MinSegments: '1',
+          BreakOnNonKeyFrames: false,
+        }
+      : c.hevc
       ? {
           Container: 'mp4',
           Type: 'Video',

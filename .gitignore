@@ -3,7 +3,11 @@ node_modules/
 
 # Builds
 dist/
+dist-tizen/
 release/
+*.wgt
+.buildResult/
+.sign/
 
 # Journaux et fichiers temporaires
 *.log

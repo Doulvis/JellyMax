@@ -2966,3 +2966,55 @@ img {
     font-size: 2rem;
   }
 }
+
+/* ---------- TV Samsung (Tizen) ----------
+   Le processeur graphique des TV supporte mal les flous en temps réel : on les remplace
+   par des fonds plus opaques et on retire les animations coûteuses. */
+html.is-tv {
+  font-size: 19px;
+}
+.is-tv,
+.is-tv * {
+  cursor: none;
+}
+.is-tv *,
+.is-tv *::before,
+.is-tv *::after {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+.is-tv .ambient {
+  display: none;
+}
+.is-tv .hero__bg img,
+.is-tv .hero__bg.is-active img {
+  transform: none;
+  transition: none;
+}
+.is-tv .glass,
+.is-tv .menu,
+.is-tv .dropdown__menu,
+.is-tv .modal__card,
+.is-tv .ppanel,
+.is-tv .player__next {
+  background: rgba(18, 20, 30, 0.97);
+}
+.is-tv .modal {
+  background: rgba(0, 0, 0, 0.8);
+}
+.is-tv .rail__arrow,
+.is-tv .drag-strip {
+  display: none;
+}
+
+/* TV 2020-2021 (Chromium < 88) : pas d'aspect-ratio. */
+@supports not (aspect-ratio: 1) {
+  .avatar-choice {
+    width: 5.4rem;
+    height: 5.4rem;
+    justify-self: center;
+  }
+  .sub-preview {
+    height: 14rem;
+  }
+}

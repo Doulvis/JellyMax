@@ -12,7 +12,10 @@
     "typecheck": "tsc --noEmit",
     "build": "tsc --noEmit && vite build",
     "start": "npm run build && electron .",
-    "dist": "npm run build && electron-builder --win --x64"
+    "dist": "npm run build && electron-builder --win --x64",
+    "build:tizen": "tsc --noEmit && vite build --mode tizen",
+    "tizen:package": "npm run build:tizen && node scripts/tizen.mjs package",
+    "tizen:install": "node scripts/tizen.mjs install"
   },
   "dependencies": {
     "@fontsource/inter": "5.1.0",

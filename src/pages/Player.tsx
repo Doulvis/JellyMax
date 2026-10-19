@@ -8,7 +8,7 @@ import { landscapeUrl } from '../api/images';
 import type { BaseItem, MediaSegment, MediaStream, TrickplayInfo } from '../api/types';
 import { Spinner } from '../components/Common';
 import * as I from '../components/Icons';
-import { isBackKey, setPlaybackActive } from '../platform';
+import { isBackKey, isTV, keyName, setPlaybackActive } from '../platform';
 import { bitrateOptions, t } from '../i18n';
 import { getSettings, updateSettings, useSettings } from '../state/settings';
 import { subtitleVars } from '../utils/subtitles';
@@ -263,7 +263,9 @@ export default function Player() {
       video.volume = st.volume;
       video.muted = st.muted;
 
-      if (isHls && Hls.isSupported()) {
+      // TV Samsung : le lecteur natif gère le HLS avec le décodage matériel, plus fiable que hls.js.
+      const nativeHls = isTV && !!video.canPlayType('application/vnd.apple.mpegurl').replace(/no/, '');
+      if (isHls && !nativeHls && Hls.isSupported()) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const config: any = {
           startPosition: startSec > 0 ? startSec : -1,
@@ -490,8 +492,14 @@ export default function Player() {
     });
   };
 
-  const actions = useRef({ start, endSession, teardownMedia, onHlsError, fallback, poke, togglePlay, seekBy, changeVolume, toggleFullscreen, exit, goNext, setPanel, reportProgress });
-  actions.current = { start, endSession, teardownMedia, onHlsError, fallback, poke, togglePlay, seekBy, changeVolume, toggleFullscreen, exit, goNext, setPanel, reportProgress };
+  /** Affiche les commandes et place le focus sur Lecture / Pause (télécommande). */
+  const focusPlay = () => {
+    poke();
+    requestAnimationFrame(() => playBtnRef.current && playBtnRef.current.focus({ preventScroll: true }));
+  };
+
+  const actions = useRef({ start, endSession, teardownMedia, onHlsError, fallback, poke, focusPlay, togglePlay, seekBy, changeVolume, toggleFullscreen, exit, goNext, setPanel, reportProgress });
+  actions.current = { start, endSession, teardownMedia, onHlsError, fallback, poke, focusPlay, togglePlay, seekBy, changeVolume, toggleFullscreen, exit, goNext, setPanel, reportProgress };
 
   // ---------------------------------------------------------------------------
   // Effets
@@ -617,7 +625,7 @@ export default function Player() {
       if (!v) return;
       const wasVisible = live.current.controls;
       const panelOpen = !!live.current.panel;
-      const key = e.key;
+      const key = keyName(e);
       const code = e.keyCode;
       const stop = () => {
         e.preventDefault();
@@ -667,8 +675,33 @@ export default function Player() {
         a.goNext();
         return;
       }
+      if (key === 'MediaTrackPrevious') {
+        stop();
+        a.seekBy(-Infinity);
+        return;
+      }
       if (panelOpen) return; // la navigation spatiale gère le panneau
       const onScrubber = !!(document.activeElement as HTMLElement | null)?.dataset?.scrubber;
+      if (isTV) {
+        // Télécommande : commandes masquées → ◀ ▶ avancent / reculent, les autres touches les affichent.
+        // Commandes affichées → les flèches se déplacent entre les boutons (sauf ◀ ▶ sur la barre de progression).
+        const arrow = key === 'ArrowLeft' || key === 'ArrowRight' || key === 'ArrowUp' || key === 'ArrowDown';
+        if (!wasVisible) {
+          if (key === 'ArrowLeft' || key === 'ArrowRight') {
+            stop();
+            a.seekBy(key === 'ArrowLeft' ? -10 : 10);
+          } else if (arrow || key === 'Enter') {
+            stop();
+            a.focusPlay();
+          }
+          return;
+        }
+        if (onScrubber && (key === 'ArrowLeft' || key === 'ArrowRight')) {
+          stop();
+          a.seekBy(key === 'ArrowLeft' ? -10 : 10);
+        }
+        return;
+      }
       if (key === 'ArrowLeft' || key === 'ArrowRight') {
         stop();
         a.seekBy(key === 'ArrowLeft' ? -10 : 10);
@@ -918,7 +951,9 @@ export default function Player() {
             <span className="player__time">-{formatClock(Math.max(0, dur - time))}</span>
           </div>
           <div className="player__bar">
+            {/* Sur TV, le volume se règle avec la télécommande. */}
             <div className="player__bar-side">
+              {!isTV && (
               <button
                 className="pbtn"
                 onClick={() => {
@@ -929,6 +964,8 @@ export default function Player() {
               >
                 {muted || volume === 0 ? <I.VolumeOff /> : <I.Volume />}
               </button>
+              )}
+              {!isTV && (
               <input
                 className="volume"
                 type="range"
@@ -945,6 +982,7 @@ export default function Player() {
                   v.volume = Number(e.target.value);
                 }}
               />
+              )}
             </div>
             <div className="player__bar-side">
               {nextEp && (
@@ -978,9 +1016,11 @@ export default function Player() {
               >
                 <I.Sliders />
               </button>
-              <button className="pbtn" onClick={toggleFullscreen} aria-label={t('player.fullscreen')} title={t('player.fullscreen')}>
-                {fullscreen ? <I.ExitFullscreen /> : <I.Fullscreen />}
-              </button>
+              {!isTV && (
+                <button className="pbtn" onClick={toggleFullscreen} aria-label={t('player.fullscreen')} title={t('player.fullscreen')}>
+                  {fullscreen ? <I.ExitFullscreen /> : <I.Fullscreen />}
+                </button>
+              )}
             </div>
           </div>
         </div>

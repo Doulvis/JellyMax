@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { JellyfinApi, type GalleryAvatar } from '../api/client';
 import { t } from '../i18n';
+import { isBackKey, isTV } from '../platform';
 import type { Profile } from '../state/auth';
 import { errorMessage } from '../utils/format';
 import { Avatar, Spinner } from './Common';
@@ -64,7 +65,7 @@ export function AvatarPicker({
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
+      if (e.key === 'Escape' || isBackKey(e)) {
         e.preventDefault();
         e.stopPropagation();
         onClose();
@@ -150,9 +151,12 @@ export function AvatarPicker({
         {error && <div className="form-error">{error}</div>}
 
         <div className="modal__foot">
-          <button className="btn btn--ghost btn--sm" disabled={!!busy} onClick={() => fileRef.current && fileRef.current.click()}>
-            {busy === 'upload' ? <Spinner size="sm" /> : <Upload />} {t('avatar.upload')}
-          </button>
+          {/* Pas de sélecteur de fichiers sur TV. */}
+          {!isTV && (
+            <button className="btn btn--ghost btn--sm" disabled={!!busy} onClick={() => fileRef.current && fileRef.current.click()}>
+              {busy === 'upload' ? <Spinner size="sm" /> : <Upload />} {t('avatar.upload')}
+            </button>
+          )}
           {profile.userImageTag && (
             <button className="btn btn--ghost btn--sm" disabled={!!busy} onClick={() => run('delete', () => client.deleteUserImage())}>
               {busy === 'delete' ? <Spinner size="sm" /> : <Trash />} {t('avatar.remove')}

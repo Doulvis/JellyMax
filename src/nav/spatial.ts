@@ -1,6 +1,8 @@
 // Navigation spatiale : les flèches (clavier ou télécommande TV) déplacent le focus
 // vers l'élément le plus proche dans la direction demandée.
 
+import { isTV, keyName } from '../platform';
+
 type Dir = 'up' | 'down' | 'left' | 'right';
 
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select, textarea, [tabindex]';
@@ -85,29 +87,98 @@ export function moveFocus(dir: Dir, instant = false): boolean {
   return true;
 }
 
+function isTextField(el: Element | null): el is HTMLInputElement {
+  if (!el) return false;
+  if (el.tagName === 'TEXTAREA') return true;
+  if (el.tagName !== 'INPUT') return false;
+  const type = (el as HTMLInputElement).type;
+  return type !== 'range' && type !== 'checkbox' && type !== 'radio' && type !== 'button' && type !== 'submit';
+}
+
+/** Place le focus sur un élément visible quand plus rien n'a le focus (TV : pas de souris pour le faire). */
+function ensureFocus() {
+  const cur = document.activeElement as HTMLElement | null;
+  if (cur && cur !== document.body && document.body.contains(cur)) return;
+  const list = candidates();
+  if (!list.length) return;
+  const visible = list.filter(inViewport);
+  const preferred =
+    visible.find((el) => el.hasAttribute('data-autofocus')) ||
+    visible.find((el) => !!el.closest('main')) ||
+    visible[0] ||
+    list[0];
+  focusEl(preferred, null, true);
+}
+
+/**
+ * TV : un champ de texte reçoit le focus en lecture seule pour que le clavier virtuel ne s'ouvre pas
+ * à chaque passage ; OK l'ouvre pour saisir.
+ */
+function initTvTextFields() {
+  document.addEventListener('focusin', (e) => {
+    const el = e.target as Element;
+    if (isTextField(el) && !el.dataset.imeOpen) el.readOnly = true;
+  });
+  document.addEventListener('focusout', (e) => {
+    const el = e.target as Element;
+    if (isTextField(el) && el.dataset.imeOpen) {
+      delete el.dataset.imeOpen;
+      el.readOnly = false;
+    }
+  });
+  window.addEventListener(
+    'keydown',
+    (e) => {
+      const el = document.activeElement;
+      if (!isTextField(el)) return;
+      const k = keyName(e);
+      if (k === 'Enter' && el.readOnly) {
+        e.preventDefault();
+        e.stopPropagation();
+        el.readOnly = false;
+        el.blur();
+        el.dataset.imeOpen = '1';
+        el.focus();
+      } else if (e.keyCode === 65376 || e.keyCode === 65385) {
+        // "Terminé" / "Annuler" du clavier virtuel : retour à la navigation.
+        delete el.dataset.imeOpen;
+        el.readOnly = true;
+      }
+    },
+    true,
+  );
+}
+
 export function initSpatialNav() {
   // Mode "clavier / télécommande" : certains effets (ex. barre latérale ouverte au focus) ne s'appliquent qu'à ce mode.
   const root = document.documentElement;
   window.addEventListener(
     'keydown',
     (e) => {
-      if (KEY_DIR[e.key] || e.key === 'Tab' || e.key === 'Enter') root.classList.add('kbd-nav');
+      const k = keyName(e);
+      if (KEY_DIR[k] || k === 'Tab' || k === 'Enter') root.classList.add('kbd-nav');
     },
     true,
   );
-  const toMouse = () => {
-    if (root.classList.contains('kbd-nav')) root.classList.remove('kbd-nav');
-  };
-  window.addEventListener('mousedown', toMouse, true);
-  window.addEventListener('mousemove', toMouse, true);
+  if (!isTV) {
+    const toMouse = () => {
+      if (root.classList.contains('kbd-nav')) root.classList.remove('kbd-nav');
+    };
+    window.addEventListener('mousedown', toMouse, true);
+    window.addEventListener('mousemove', toMouse, true);
+  } else {
+    initTvTextFields();
+    window.setInterval(ensureFocus, 400);
+  }
 
   window.addEventListener('keydown', (e) => {
     if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) return;
     const active = document.activeElement as HTMLElement | null;
-    const dir = KEY_DIR[e.key];
+    const key = keyName(e);
+    const dir = KEY_DIR[key];
     if (dir) {
       if (active && active.tagName === 'SELECT') return;
-      if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
+      if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA') && !(active as HTMLInputElement).readOnly) {
         const input = active as HTMLInputElement;
         if (input.type === 'range') {
           if (dir === 'left' || dir === 'right') return;
@@ -124,7 +195,7 @@ export function initSpatialNav() {
       if (moveFocus(dir, e.repeat)) e.preventDefault();
       return;
     }
-    if (e.key === 'Enter' && active && active !== document.body) {
+    if (key === 'Enter' && active && active !== document.body) {
       const tag = active.tagName;
       if (tag !== 'A' && tag !== 'BUTTON' && tag !== 'INPUT' && tag !== 'SELECT' && tag !== 'TEXTAREA') {
         active.click();
