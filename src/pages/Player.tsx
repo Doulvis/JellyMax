@@ -1,6 +1,6 @@
 import Hls from 'hls.js';
 import type { ErrorData } from 'hls.js';
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { api } from '../api/client';
 import { buildDeviceProfile } from '../api/deviceProfile';
@@ -8,7 +8,7 @@ import { landscapeUrl } from '../api/images';
 import type { BaseItem, MediaSegment, MediaStream, TrickplayInfo } from '../api/types';
 import { Spinner } from '../components/Common';
 import * as I from '../components/Icons';
-import { isBackKey, isTV, keyName, setPlaybackActive } from '../platform';
+import { isBackKey, isMobile, isTV, keyName, setPlaybackActive } from '../platform';
 import { bitrateOptions, t } from '../i18n';
 import { getSettings, updateSettings, useSettings } from '../state/settings';
 import { subtitleVars } from '../utils/subtitles';
@@ -492,6 +492,40 @@ export default function Player() {
     });
   };
 
+  /**
+   * Mobile : un appui affiche ou masque les commandes ; un double appui sur la moitié gauche / droite
+   * recule / avance de 10 s (cumulable en enchaînant les appuis), comme les applications de streaming.
+   */
+  const tapRef = useRef<{ time: number; timer: number; streak: number }>({ time: 0, timer: 0, streak: 0 });
+  const [seekFlash, setSeekFlash] = useState<{ id: number; delta: number } | null>(null);
+  const flashTimer = useRef(0);
+  const onSurfaceTap = (e: ReactMouseEvent<HTMLDivElement>) => {
+    const tap = tapRef.current;
+    const now = Date.now();
+    const rect = e.currentTarget.getBoundingClientRect();
+    const side = e.clientX < rect.left + rect.width / 2 ? -1 : 1;
+    window.clearTimeout(tap.timer);
+    if (now - tap.time < 300) {
+      // Double appui (ou appuis suivants d'une série) : saut de 10 s.
+      tap.time = now;
+      tap.streak = seekFlash && Math.sign(seekFlash.delta) === side ? tap.streak + 1 : 1;
+      seekBy(side * 10);
+      setSeekFlash({ id: now, delta: side * 10 * tap.streak });
+      window.clearTimeout(flashTimer.current);
+      flashTimer.current = window.setTimeout(() => setSeekFlash(null), 700);
+      return;
+    }
+    tap.time = now;
+    tap.streak = 0;
+    tap.timer = window.setTimeout(() => {
+      if (live.current.controls) {
+        window.clearTimeout(hideTimerRef.current);
+        setControls(false);
+        live.current.controls = false;
+      } else poke();
+    }, 300);
+  };
+
   /** Affiche les commandes et place le focus sur Lecture / Pause (télécommande). */
   const focusPlay = () => {
     poke();
@@ -861,8 +895,9 @@ export default function Player() {
   return (
     <div
       className={`player ${controls ? 'show-controls' : 'hide-controls'} ${buffering ? 'is-buffering' : ''}`}
-      onMouseMove={() => poke()}
-      onTouchStart={() => poke()}
+      // Mobile : les commandes s'affichent / se masquent d'un appui (voir onSurfaceTap), pas à chaque contact.
+      onMouseMove={isMobile ? undefined : () => poke()}
+      onTouchStart={isMobile ? undefined : () => poke()}
     >
       <video
         ref={setVideoEl}
@@ -907,7 +942,18 @@ export default function Player() {
         }}
       />
 
-      <div className="player__click" onClick={togglePlay} onDoubleClick={toggleFullscreen} />
+      {isMobile ? (
+        <div className="player__click" onClick={onSurfaceTap} />
+      ) : (
+        <div className="player__click" onClick={togglePlay} onDoubleClick={toggleFullscreen} />
+      )}
+
+      {seekFlash && (
+        <div key={seekFlash.id} className={`player__seek-flash player__seek-flash--${seekFlash.delta < 0 ? 'left' : 'right'}`}>
+          {seekFlash.delta < 0 ? <I.Rewind10 /> : <I.Forward10 />}
+          <span>{seekFlash.delta < 0 ? '−' : '+'}{Math.abs(seekFlash.delta)} s</span>
+        </div>
+      )}
 
       {cueHtml && (
         <div className="player__subs" style={subtitleVars(settings)}>
@@ -953,7 +999,7 @@ export default function Player() {
           <div className="player__bar">
             {/* Sur TV, le volume se règle avec la télécommande. */}
             <div className="player__bar-side">
-              {!isTV && (
+              {!isTV && !isMobile && (
               <button
                 className="pbtn"
                 onClick={() => {
@@ -965,7 +1011,7 @@ export default function Player() {
                 {muted || volume === 0 ? <I.VolumeOff /> : <I.Volume />}
               </button>
               )}
-              {!isTV && (
+              {!isTV && !isMobile && (
               <input
                 className="volume"
                 type="range"
@@ -1016,7 +1062,7 @@ export default function Player() {
               >
                 <I.Sliders />
               </button>
-              {!isTV && (
+              {!isTV && !isMobile && (
                 <button className="pbtn" onClick={toggleFullscreen} aria-label={t('player.fullscreen')} title={t('player.fullscreen')}>
                   {fullscreen ? <I.ExitFullscreen /> : <I.Fullscreen />}
                 </button>

@@ -12,7 +12,7 @@ import Profiles from './pages/Profiles';
 import SearchPage from './pages/Search';
 import ServerConnect from './pages/ServerConnect';
 import SettingsPage from './pages/Settings';
-import { exitApp, isBackKey, isTV, keyName } from './platform';
+import { exitApp, isAndroid, isBackKey, isTV, keyName } from './platform';
 import { AuthProvider, useAuth } from './state/auth';
 
 // Le lecteur (et hls.js) n'est chargé qu'à la première lecture : démarrage plus rapide.
@@ -40,6 +40,8 @@ function MainLayout() {
   );
 }
 
+const TAB_ROOTS = ['/', '/search', '/movies', '/shows', '/mylist', '/settings'];
+
 /** Bouton "précédent" de la souris ou du clavier, Alt+← */
 function BackHandler() {
   const navigate = useNavigate();
@@ -48,9 +50,13 @@ function BackHandler() {
       if (e.defaultPrevented) return;
       if (isBackKey(e) || (e.altKey && e.key === 'ArrowLeft')) {
         e.preventDefault();
-        // TV : "Retour" sur le premier écran ferme l'application, comme les applications Samsung.
+        // TV et Android : "Retour" sur le premier écran ferme l'application.
+        // Android : les onglets remplacent la page, "Retour" depuis un onglet ramène d'abord à l'accueil.
         const state = window.history.state as { idx?: number } | null;
-        if (isTV && (!state || !state.idx)) exitApp();
+        const atStart = !state || !state.idx;
+        const hash = window.location.hash.replace(/^#/, '') || '/';
+        if (isAndroid && atStart && TAB_ROOTS.indexOf(hash.split('?')[0]) > 0) navigate('/', { replace: true });
+        else if ((isTV || isAndroid) && atStart) exitApp();
         else navigate(-1);
       } else if (isTV && keyName(e) === 'Exit') {
         exitApp();

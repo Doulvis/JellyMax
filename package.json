@@ -1,7 +1,7 @@
 {
   "name": "jellymax",
   "productName": "JellyMax",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "description": "Client Jellyfin pour Windows au design inspiré de HBO Max",
   "author": "JellyMax",
   "private": true,
@@ -15,9 +15,14 @@
     "dist": "npm run build && electron-builder --win --x64",
     "build:tizen": "tsc --noEmit && vite build --mode tizen",
     "tizen:package": "npm run build:tizen && node scripts/tizen.mjs package",
-    "tizen:install": "node scripts/tizen.mjs install"
+    "tizen:install": "node scripts/tizen.mjs install",
+    "build:android": "tsc --noEmit && vite build --mode android && cap sync android",
+    "android:apk": "npm run build:android && node scripts/android.mjs"
   },
   "dependencies": {
+    "@capacitor/android": "7.6.9",
+    "@capacitor/app": "7.1.2",
+    "@capacitor/core": "7.6.9",
     "@fontsource/inter": "5.1.0",
     "hls.js": "1.5.17",
     "react": "18.3.1",
@@ -25,6 +30,7 @@
     "react-router-dom": "6.28.0"
   },
   "devDependencies": {
+    "@capacitor/cli": "7.6.9",
     "@types/react": "18.3.12",
     "@types/react-dom": "18.3.1",
     "@vitejs/plugin-react": "4.3.4",
@@ -45,12 +51,23 @@
       "dist/**/*",
       "electron/**/*",
       "build/icon.png",
-      "package.json"
+      "package.json",
+      "!node_modules/**/*"
     ],
     "win": {
       "target": [
-        { "target": "nsis", "arch": ["x64"] },
-        { "target": "portable", "arch": ["x64"] }
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
       ],
       "icon": "build/icon.png"
     },

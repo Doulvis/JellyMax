@@ -1,0 +1,710 @@
+/* =============================================================================
+   JellyMax — téléphones et tablettes Android (html.is-mobile)
+   Navigation au pouce (barre d'onglets en bas), mises en page adaptées à la largeur,
+   commandes tactiles, et effets allégés pour rester fluide sur tous les appareils.
+   ============================================================================= */
+
+html.is-mobile {
+  font-size: 15px;
+  --side: 0px;
+  --gl: 1rem;
+  --gr: 1rem;
+  --gap: 0.6rem;
+  --gutter: 1.1rem;
+  --tabbar: 3.9rem;
+  -webkit-tap-highlight-color: transparent;
+}
+@media (min-width: 600px) {
+  html.is-mobile {
+    font-size: 16px;
+    --gl: 1.6rem;
+    --gr: 1.6rem;
+    --gap: 0.8rem;
+    --gutter: 1.6rem;
+  }
+}
+.is-mobile body {
+  overscroll-behavior-y: none;
+  -webkit-text-size-adjust: 100%;
+}
+/* Pas de barres de défilement : on fait défiler au doigt. */
+.is-mobile ::-webkit-scrollbar {
+  display: none;
+}
+.is-mobile .search-box input {
+  font-size: 1.2rem;
+}
+/* Pas d'outline au toucher (le focus visible reste utile au clavier Bluetooth). */
+.is-mobile :focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ---------- Effets coûteux allégés ---------- */
+.is-mobile .ambient,
+.is-mobile .card__frame::after,
+.is-mobile .genre-tile::after,
+.is-mobile .rail__arrow,
+.is-mobile .drag-strip {
+  display: none;
+}
+.is-mobile .rail__track,
+.is-mobile .cast--rail,
+.is-mobile .hero__bg,
+.is-mobile .detail__backdrop {
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+.is-mobile .app-main {
+  background: var(--bg);
+  padding-bottom: calc(var(--tabbar) + 1rem);
+}
+/* Les carrousels hors de l'écran ne sont ni mis en page ni dessinés. */
+.is-mobile .lazy-rail {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 16rem;
+}
+
+/* ---------- Barre d'onglets ---------- */
+.tabbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 60;
+  height: var(--tabbar);
+  display: flex;
+  align-items: stretch;
+  background: rgba(6, 8, 13, 0.94);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+.tabbar__item {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.22rem;
+  color: var(--text-3);
+  font-size: 0.66rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.tabbar__item span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tabbar__item svg {
+  width: 1.45rem;
+  height: 1.45rem;
+}
+.tabbar__item .avatar {
+  width: 1.55rem;
+  height: 1.55rem;
+  font-size: 0.72rem;
+}
+.tabbar__item.active {
+  color: #fff;
+}
+.tabbar__item.active svg {
+  filter: drop-shadow(0 0 8px rgba(90, 195, 245, 0.8));
+}
+.tabbar__item.active .avatar {
+  box-shadow: 0 0 0 2px #fff;
+}
+.tabbar__item:active {
+  opacity: 0.6;
+}
+@media (min-width: 600px) {
+  .tabbar {
+    justify-content: center;
+  }
+  .tabbar__item {
+    flex: 0 1 8rem;
+    flex-direction: row;
+    gap: 0.55rem;
+    font-size: 0.82rem;
+  }
+}
+.sheet-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 64;
+  background: rgba(0, 0, 0, 0.45);
+}
+.menu--sheet {
+  position: fixed;
+  z-index: 65;
+  right: 0.6rem;
+  bottom: calc(var(--tabbar) + 0.6rem);
+  width: 17rem;
+  max-width: calc(100vw - 1.2rem);
+  background: rgba(20, 22, 32, 0.97);
+}
+.is-mobile .menu a,
+.is-mobile .menu button {
+  padding: 0.85rem 0.9rem;
+  font-size: 0.98rem;
+}
+
+/* ---------- Bannière ---------- */
+.is-mobile .hero {
+  height: 74vh;
+  max-height: 46rem;
+  min-height: 25rem;
+}
+.is-mobile .hero__shade {
+  background: linear-gradient(0deg, #000 0%, rgba(0, 0, 0, 0.7) 28%, rgba(0, 0, 0, 0) 62%),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.45) 0%, rgba(0, 0, 0, 0) 22%);
+}
+.is-mobile .hero__content {
+  left: var(--gl);
+  right: var(--gr);
+  bottom: 2.6rem;
+  width: auto;
+  max-width: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.is-mobile .hero__logo {
+  max-width: 78%;
+  max-height: 6.5rem;
+  object-position: center bottom;
+  margin-bottom: 0.9rem;
+}
+.is-mobile .hero__title {
+  font-size: 2.1rem;
+  margin-bottom: 0.6rem;
+}
+.is-mobile .hero .meta {
+  justify-content: center;
+  font-size: 0.82rem;
+  margin-bottom: 1.1rem;
+}
+.is-mobile .hero__overview {
+  display: none;
+}
+.is-mobile .hero__actions {
+  flex-wrap: nowrap;
+  justify-content: center;
+  width: 100%;
+  max-width: 24rem;
+}
+.is-mobile .hero__actions .btn {
+  flex: 1;
+  height: 2.9rem;
+  padding: 0 1rem;
+}
+.is-mobile .hero__dots {
+  left: 50%;
+  right: auto;
+  bottom: 1rem;
+  transform: translateX(-50%);
+}
+.is-mobile .hero ~ .rails {
+  margin-top: 0.4rem;
+}
+/* Tablette : texte à gauche, résumé visible, comme sur grand écran. */
+@media (min-width: 600px) {
+  .is-mobile .hero {
+    height: 64vh;
+  }
+  .is-mobile .hero__shade {
+    background: linear-gradient(90deg, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.4) 40%, rgba(0, 0, 0, 0) 70%),
+      linear-gradient(0deg, #000 0%, rgba(0, 0, 0, 0.5) 25%, rgba(0, 0, 0, 0) 55%);
+  }
+  .is-mobile .hero__content {
+    right: auto;
+    width: 30rem;
+    max-width: 60vw;
+    align-items: flex-start;
+    text-align: left;
+  }
+  .is-mobile .hero__logo {
+    object-position: left bottom;
+  }
+  .is-mobile .hero .meta {
+    justify-content: flex-start;
+  }
+  .is-mobile .hero__overview {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    font-size: 0.95rem;
+    margin-bottom: 1.2rem;
+  }
+  .is-mobile .hero__actions {
+    justify-content: flex-start;
+    max-width: none;
+  }
+  .is-mobile .hero__actions .btn {
+    flex: 0 0 auto;
+    padding: 0 1.5rem;
+  }
+  .is-mobile .hero__dots {
+    left: auto;
+    right: var(--gr);
+    transform: none;
+  }
+}
+
+/* ---------- Carrousels & cartes ---------- */
+.is-mobile .rail {
+  margin-bottom: 0.4rem;
+}
+.is-mobile .rail__head h2 {
+  font-size: 1.08rem;
+}
+.is-mobile .rail__track {
+  padding: 0.6rem var(--gr) 1rem var(--gl);
+  scroll-padding: 0 var(--gr) 0 var(--gl);
+  -webkit-overflow-scrolling: touch;
+}
+/* Téléphone : ~2 vignettes horizontales ou ~3 affiches visibles, la suivante dépasse pour inviter à glisser. */
+@media (max-width: 599px) {
+  .is-mobile .rail__track--landscape > * {
+    width: calc((100vw - var(--gl) - var(--gr) - var(--gap)) / 1.7);
+  }
+  .is-mobile .rail__track--poster > * {
+    width: calc((100vw - var(--gl) - var(--gr) - 2 * var(--gap)) / 3.25);
+  }
+}
+@media (min-width: 600px) and (max-width: 1023px) {
+  .is-mobile .rail__track--landscape > * {
+    width: calc((100vw - var(--gl) - var(--gr) - 2 * var(--gap)) / 2.6);
+  }
+  .is-mobile .rail__track--poster > * {
+    width: calc((100vw - var(--gl) - var(--gr) - 4 * var(--gap)) / 4.6);
+  }
+}
+/* Pas d'effet de survol au toucher (il resterait collé) : léger enfoncement à l'appui. */
+.is-mobile .card:hover .card__frame,
+.is-mobile .card:focus .card__frame {
+  transform: none;
+  box-shadow: none;
+}
+.is-mobile .card:active .card__frame {
+  transform: scale(0.96);
+  transition-duration: 0.08s;
+}
+.is-mobile .card__play {
+  opacity: 1;
+  transform: none;
+  width: 2.5rem;
+  height: 2.5rem;
+  margin: -1.25rem 0 0 -1.25rem;
+}
+.is-mobile .card__play svg {
+  width: 1rem;
+  height: 1rem;
+}
+.is-mobile .card__title {
+  font-size: 0.85rem;
+}
+.is-mobile .card__sub {
+  font-size: 0.74rem;
+}
+.is-mobile .card__brand span {
+  font-size: 0.95rem;
+}
+.is-mobile .grid {
+  gap: 1.1rem var(--gap);
+}
+.is-mobile .grid--poster {
+  grid-template-columns: repeat(auto-fill, minmax(6.6rem, 1fr));
+}
+.is-mobile .grid--landscape {
+  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+}
+@media (min-width: 600px) {
+  .is-mobile .grid--landscape {
+    grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+  }
+}
+
+/* ---------- Pages ---------- */
+.is-mobile .page {
+  padding: 1.4rem var(--gr) 1.5rem var(--gl);
+  min-height: 0;
+}
+.is-mobile .page-flush {
+  padding-top: 1.2rem;
+}
+.is-mobile .page__title {
+  font-size: 1.9rem;
+}
+.is-mobile .section-title {
+  font-size: 1.12rem;
+}
+.is-mobile .browse {
+  padding-top: 1.4rem;
+}
+.is-mobile .browse__head h2 {
+  font-size: 1.4rem;
+}
+.is-mobile .dropdown__menu {
+  max-width: calc(100vw - 2rem);
+  max-height: 60vh;
+}
+.is-mobile .dropdown__opt {
+  padding: 0.8rem;
+}
+.is-mobile .chip {
+  padding: 0.55rem 1rem;
+}
+.is-mobile .error-state {
+  padding: 2rem var(--gr);
+}
+
+/* ---------- Recherche ---------- */
+.is-mobile .search-box > svg {
+  width: 1.4rem;
+  height: 1.4rem;
+}
+.is-mobile .search-box input {
+  height: 3.4rem;
+}
+.is-mobile .genre-tiles {
+  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+  gap: 0.7rem;
+}
+.is-mobile .genre-tile {
+  height: 5.6rem;
+  padding: 0.75rem 0.85rem;
+}
+.is-mobile .genre-tile__name {
+  font-size: 1rem;
+}
+.is-mobile .genre-tile:hover {
+  transform: none;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+/* ---------- Fiche détaillée ---------- */
+@media (max-width: 599px) {
+  /* Téléphone : image en haut, informations dessous. */
+  .is-mobile .detail__hero {
+    display: block;
+    min-height: 0;
+  }
+  .is-mobile .detail__backdrop {
+    position: relative;
+    height: 64vw;
+  }
+  .is-mobile .detail__shade {
+    bottom: auto;
+    height: 64vw;
+    background: linear-gradient(0deg, #000 0%, rgba(0, 0, 0, 0.35) 38%, rgba(0, 0, 0, 0) 60%),
+      linear-gradient(180deg, rgba(0, 0, 0, 0.45) 0%, rgba(0, 0, 0, 0) 25%);
+  }
+  .is-mobile .detail__content {
+    width: auto;
+    max-width: none;
+    margin-top: -3.2rem;
+    padding: 0 var(--gr) 1.4rem var(--gl);
+  }
+  .is-mobile .detail__logo {
+    max-width: 70%;
+    max-height: 5rem;
+    margin-bottom: 0.9rem;
+  }
+  .is-mobile .detail__title {
+    font-size: 1.9rem;
+  }
+  .is-mobile .detail__overview {
+    font-size: 0.93rem;
+    -webkit-line-clamp: 5;
+    margin-bottom: 1.3rem;
+  }
+  .is-mobile .detail__actions {
+    gap: 0.6rem 0.4rem;
+  }
+  .is-mobile .detail__actions > .btn {
+    flex: 1 1 100%;
+    margin-top: 0;
+  }
+  .is-mobile .detail__actions .icon-pill {
+    flex: 1;
+    min-width: 0;
+  }
+  .is-mobile .detail__progress .bar {
+    flex: 1;
+  }
+}
+@media (min-width: 600px) {
+  .is-mobile .detail__hero {
+    min-height: 70vh;
+  }
+  .is-mobile .detail__content {
+    width: auto;
+    max-width: 78vw;
+    padding-top: 3rem;
+  }
+  .is-mobile .detail__title {
+    font-size: 2.6rem;
+  }
+}
+.is-mobile .detail__body {
+  padding-bottom: 1.5rem;
+}
+.is-mobile .tabs {
+  gap: 1.4rem;
+  margin-bottom: 1.2rem;
+}
+.is-mobile .tabs__btn {
+  font-size: 0.95rem;
+}
+.is-mobile .ep {
+  gap: 0.85rem;
+  padding: 0.5rem 0;
+}
+.is-mobile .ep:hover {
+  background: none;
+}
+.is-mobile .ep__thumb {
+  width: 9rem;
+}
+.is-mobile .ep__play {
+  opacity: 1;
+  width: 2.2rem;
+  height: 2.2rem;
+  margin: -1.1rem 0 0 -1.1rem;
+}
+.is-mobile .ep__title {
+  font-size: 0.92rem;
+}
+.is-mobile .ep__meta {
+  font-size: 0.76rem;
+  margin-bottom: 0;
+}
+@media (max-width: 599px) {
+  .is-mobile .ep__overview {
+    display: none;
+  }
+}
+.is-mobile .ep__watched {
+  width: 2.2rem;
+  height: 2.2rem;
+}
+.is-mobile .details {
+  grid-template-columns: 1fr;
+  gap: 1.8rem;
+}
+.is-mobile .facts dt {
+  width: 6rem;
+}
+.is-mobile .cast__item {
+  width: 5.8rem;
+}
+.is-mobile .cast__img {
+  width: 5.2rem;
+  height: 5.2rem;
+}
+.is-mobile .cast--rail {
+  padding: 0.6rem var(--gr) 1rem var(--gl);
+}
+@media (max-width: 599px) {
+  .is-mobile .person {
+    flex-direction: column;
+    gap: 1.2rem;
+  }
+  .is-mobile .person__img {
+    width: 8rem;
+    height: 12rem;
+  }
+}
+
+/* ---------- Paramètres ---------- */
+.is-mobile .setting {
+  flex-wrap: wrap;
+  gap: 0.8rem 1rem;
+  padding: 0.95rem 1rem;
+}
+.is-mobile .setting__text {
+  flex: 1 1 12rem;
+}
+.is-mobile .settings__section {
+  margin-bottom: 1.8rem;
+}
+
+/* ---------- Connexion & profils ---------- */
+.is-mobile .auth {
+  padding: 2rem 1.2rem;
+  justify-content: flex-start;
+  padding-top: 12vh;
+}
+.is-mobile .auth__logo {
+  margin-bottom: 1.8rem;
+}
+.is-mobile .auth__logo .logo {
+  font-size: 2rem;
+}
+.is-mobile .auth h1 {
+  font-size: 1.8rem;
+}
+.is-mobile .auth__sub {
+  margin-bottom: 1.6rem;
+}
+.is-mobile .field input {
+  font-size: 16px;
+}
+.is-mobile .profiles {
+  gap: 1.4rem 1.2rem;
+}
+.is-mobile .profile-tile {
+  width: 6.6rem;
+}
+.is-mobile .profile-tile .avatar--xl {
+  width: 6rem;
+  height: 6rem;
+  font-size: 2.2rem;
+}
+.is-mobile .profile-tile:hover .avatar {
+  box-shadow: none;
+  transform: none;
+}
+.is-mobile .profile-tile:active .avatar {
+  transform: scale(0.95);
+}
+
+/* ---------- Fenêtre modale : panneau qui monte du bas sur téléphone ---------- */
+@media (max-width: 599px) {
+  .is-mobile .modal {
+    padding: 0;
+    place-items: end stretch;
+  }
+  .is-mobile .modal__card {
+    width: 100%;
+    max-height: 88vh;
+    border-radius: 1.1rem 1.1rem 0 0;
+    padding: 1.2rem 1rem 1.4rem;
+  }
+}
+.is-mobile .avatar-grid {
+  grid-template-columns: repeat(auto-fill, minmax(4.4rem, 1fr));
+  gap: 0.8rem;
+}
+.is-mobile .avatar-choice:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+/* ---------- Lecteur ---------- */
+.is-mobile .player__top {
+  padding: 1rem var(--gutter) 3.5rem;
+}
+.is-mobile .player__title {
+  font-size: 1.05rem;
+}
+.is-mobile .player__subtitle {
+  font-size: 0.82rem;
+}
+.is-mobile .player__middle {
+  gap: 2.6rem;
+}
+.is-mobile .pbtn--lg {
+  width: 3.4rem;
+  height: 3.4rem;
+}
+.is-mobile .pbtn--lg svg {
+  width: 2.1rem;
+  height: 2.1rem;
+}
+.is-mobile .pbtn--xl {
+  width: 4.6rem;
+  height: 4.6rem;
+}
+.is-mobile .pbtn--xl svg {
+  width: 2.4rem;
+  height: 2.4rem;
+}
+.is-mobile .pbtn:hover {
+  background: none;
+}
+.is-mobile .pbtn.is-on {
+  background: rgba(255, 255, 255, 0.15);
+}
+.is-mobile .player__bottom {
+  padding: 3rem var(--gutter) 0.9rem;
+}
+.is-mobile .player__time {
+  font-size: 0.78rem;
+  min-width: 3rem;
+}
+/* Barre de progression plus facile à saisir au doigt. */
+.is-mobile .scrubber {
+  height: 2.2rem;
+}
+.is-mobile .scrubber__track {
+  height: 5px;
+}
+.is-mobile .scrubber__knob {
+  transform: scale(1);
+}
+.is-mobile .player__skip {
+  padding: 0.75rem 1.2rem;
+  font-size: 0.9rem;
+}
+.is-mobile .player__next {
+  width: 26rem;
+}
+.is-mobile .player__next-thumb {
+  width: 8.5rem;
+}
+.is-mobile .ppanel {
+  left: auto;
+  right: 0.8rem;
+  bottom: 0.8rem;
+  max-height: calc(100vh - 1.6rem);
+  min-width: 0;
+  max-width: calc(100vw - 1.6rem);
+  padding: 0.9rem 1rem 1rem;
+  background: rgba(16, 18, 28, 0.95);
+}
+.is-mobile .ppanel__col {
+  min-width: 11rem;
+  max-height: calc(100vh - 7rem);
+}
+.is-mobile .ppanel__opt {
+  padding: 0.75rem 0.6rem;
+}
+.is-mobile .pep__thumb {
+  width: 7rem;
+}
+/* Double appui : indicateur de saut de 10 s. */
+.player__seek-flash {
+  position: absolute;
+  top: 50%;
+  z-index: 4;
+  width: 6.5rem;
+  height: 6.5rem;
+  margin-top: -3.25rem;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.14);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+  pointer-events: none;
+  font-weight: 700;
+  font-size: 0.85rem;
+  animation: fadeIn 0.12s;
+}
+.player__seek-flash svg {
+  width: 2rem;
+  height: 2rem;
+}
+.player__seek-flash--left {
+  left: 12%;
+}
+.player__seek-flash--right {
+  right: 12%;
+}

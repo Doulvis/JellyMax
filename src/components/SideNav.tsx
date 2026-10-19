@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, NavLink, useNavigate } from 'react-router-dom';
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { t } from '../i18n';
-import { isBackKey } from '../platform';
+import { isBackKey, isMobile } from '../platform';
 import { useAuth } from '../state/auth';
 import { AvatarPicker } from './AvatarPicker';
 import { Avatar, LogoMark } from './Common';
@@ -15,6 +15,9 @@ const ITEMS = [
   { to: '/mylist', key: 'nav.mylist', Icon: Heart, end: false },
 ] as const;
 
+// Ordre des onglets sur mobile : l'accueil en premier, comme les applications de streaming.
+const TAB_ITEMS = [ITEMS[1], ITEMS[0], ITEMS[2], ITEMS[3], ITEMS[4]];
+
 /** Barre de navigation verticale façon HBO Max : icônes, qui s'élargit au survol / au focus. */
 export function SideNav() {
   const { session, logout, leaveProfile, updateProfile } = useAuth();
@@ -22,6 +25,10 @@ export function SideNav() {
   const [menu, setMenu] = useState(false);
   const [editAvatar, setEditAvatar] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const { pathname } = useLocation();
+
+  // Le menu du profil se referme quand on change de page.
+  useEffect(() => setMenu(false), [pathname]);
 
   useEffect(() => {
     if (!menu) return;
@@ -61,6 +68,74 @@ export function SideNav() {
     navigate('/profiles', { replace: true });
   };
 
+  const menuItems = (
+    <>
+      <div className="menu__head">
+        {session.userName}
+        <small>{session.serverName || session.serverUrl}</small>
+      </div>
+      <button
+        onClick={() => {
+          setMenu(false);
+          setEditAvatar(true);
+        }}
+      >
+        <Pencil /> {t('profiles.editAvatar')}
+      </button>
+      <Link to="/settings" onClick={() => setMenu(false)}>
+        <Gear /> {t('nav.settings')}
+      </Link>
+      <button onClick={switchProfile}>
+        <Users /> {t('nav.switchProfile')}
+      </button>
+      <button onClick={signOut}>
+        <Logout /> {t('nav.signOut')}
+      </button>
+    </>
+  );
+
+  const avatarPicker = editAvatar && (
+    <AvatarPicker
+      profile={session}
+      onClose={() => setEditAvatar(false)}
+      onUpdated={(tag) => updateProfile(session.id, { userImageTag: tag })}
+    />
+  );
+
+  // Téléphones et tablettes : barre d'onglets en bas de l'écran, à portée de pouce.
+  if (isMobile) {
+    return (
+      <>
+        <nav className="tabbar">
+          {TAB_ITEMS.map(({ to, key, Icon, end }) => (
+            <NavLink key={to} to={to} end={end} replace className="tabbar__item">
+              <Icon />
+              <span>{t(key)}</span>
+            </NavLink>
+          ))}
+          <button
+            className={`tabbar__item ${menu ? 'active' : ''}`}
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={() => setMenu((m) => !m)}
+            aria-expanded={menu}
+          >
+            <Avatar userId={session.userId} tag={session.userImageTag} name={session.userName} size="sm" />
+            <span>{t('nav.profile')}</span>
+          </button>
+        </nav>
+        {menu && (
+          <>
+            <div className="sheet-backdrop" />
+            <div className="menu menu--sheet" ref={menuRef} data-nav-scope>
+              {menuItems}
+            </div>
+          </>
+        )}
+        {avatarPicker}
+      </>
+    );
+  }
+
   return (
     <>
       <aside className={`sidenav ${menu ? 'is-open' : ''}`}>
@@ -96,27 +171,7 @@ export function SideNav() {
         <div className="sidenav__bottom" ref={menuRef}>
           {menu && (
             <div className="menu menu--side" data-nav-scope>
-              <div className="menu__head">
-                {session.userName}
-                <small>{session.serverName || session.serverUrl}</small>
-              </div>
-              <button
-                onClick={() => {
-                  setMenu(false);
-                  setEditAvatar(true);
-                }}
-              >
-                <Pencil /> {t('profiles.editAvatar')}
-              </button>
-              <Link to="/settings" onClick={() => setMenu(false)}>
-                <Gear /> {t('nav.settings')}
-              </Link>
-              <button onClick={switchProfile}>
-                <Users /> {t('nav.switchProfile')}
-              </button>
-              <button onClick={signOut}>
-                <Logout /> {t('nav.signOut')}
-              </button>
+              {menuItems}
             </div>
           )}
           <button className="sidenav__item sidenav__profile" onClick={() => setMenu((m) => !m)} aria-label={t('nav.profile')} aria-expanded={menu}>
@@ -127,13 +182,7 @@ export function SideNav() {
       </aside>
       {/* Voile derrière la barre : il s'élargit et s'estompe progressivement quand la barre s'ouvre. */}
       <div className="sidenav-shade" aria-hidden="true" />
-      {editAvatar && (
-        <AvatarPicker
-          profile={session}
-          onClose={() => setEditAvatar(false)}
-          onUpdated={(tag) => updateProfile(session.id, { userImageTag: tag })}
-        />
-      )}
+      {avatarPicker}
     </>
   );
 }

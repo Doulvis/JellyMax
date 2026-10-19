@@ -6,16 +6,18 @@ import '@fontsource/inter/latin-600.css';
 import '@fontsource/inter/latin-700.css';
 import '@fontsource/inter/latin-800.css';
 import './styles/global.css';
+import './styles/mobile.css';
 
 import { createRoot } from 'react-dom/client';
 import App from './App';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { initSpatialNav } from './nav/spatial';
-import { initPlatform } from './platform';
+import { initPlatform, isAndroid } from './platform';
 import { useSettings } from './state/settings';
 
 initPlatform();
 initSpatialNav();
+if (isAndroid) import('./android').then((m) => m.initAndroid());
 
 window.addEventListener('unhandledrejection', (e) => {
   console.warn('[JellyMax] promesse non gérée', e.reason);

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Fond turquoise de l'icône JellyMax, prolongé sous la méduse dans l'icône adaptative. -->
+    <color name="ic_launcher_background">#216E8C</color>
+</resources>

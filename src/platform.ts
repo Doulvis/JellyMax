@@ -27,7 +27,7 @@ declare global {
 }
 
 export const APP_NAME = 'JellyMax';
-export const APP_VERSION = '1.0.2';
+export const APP_VERSION = '1.1.0';
 
 export const isElectron = typeof window !== 'undefined' && !!window.jellymax;
 /** Application installée sur une TV Samsung (API Tizen disponibles). */
@@ -35,8 +35,28 @@ export const isTizen = typeof window !== 'undefined' && (!!window.tizen || /Tize
 /** Interface TV (télécommande, pas de souris) : build Tizen ou TV Tizen détectée. */
 export const isTV = import.meta.env.MODE === 'tizen' || isTizen;
 
-export const deviceName = isElectron ? 'JellyMax Windows' : isTV ? 'JellyMax Samsung TV' : 'JellyMax Web';
-export const platformLabel = isElectron ? 'Windows' : isTV ? 'Samsung TV (Tizen)' : 'Web';
+/** Application Android (téléphone ou tablette), construite avec `vite build --mode android`. */
+export const isAndroid = import.meta.env.MODE === 'android';
+/** Interface tactile : barre d'onglets en bas, lecteur tactile, pas de survol. */
+export const isMobile = isAndroid;
+const isTablet = isAndroid && Math.min(screen.width, screen.height) >= 600;
+
+export const deviceName = isElectron
+  ? 'JellyMax Windows'
+  : isTV
+    ? 'JellyMax Samsung TV'
+    : isAndroid
+      ? isTablet
+        ? 'JellyMax Android Tablet'
+        : 'JellyMax Android'
+      : 'JellyMax Web';
+export const platformLabel = isElectron ? 'Windows' : isTV ? 'Samsung TV (Tizen)' : isAndroid ? 'Android' : 'Web';
+
+/** Fonctions natives fournies par la couche Android (src/android.ts), chargée uniquement dans ce build. */
+export const native: {
+  setPlayback?: (active: boolean) => void;
+  exit?: () => void;
+} = {};
 
 // Touches de la télécommande à demander explicitement au système (sinon elles ne sont pas transmises).
 const TV_KEYS = [
@@ -82,6 +102,7 @@ export function keyName(e: KeyboardEvent): string {
 export function initPlatform() {
   const root = document.documentElement;
   if (isElectron) root.classList.add('is-electron');
+  if (isMobile) root.classList.add('is-mobile');
   if (isTV) {
     root.classList.add('is-tv', 'kbd-nav');
     try {
@@ -115,8 +136,12 @@ export function isBackKey(e: KeyboardEvent) {
   return k === 'Back' || k === 'BrowserBack' || k === 'GoBack';
 }
 
-/** Ferme l'application (TV uniquement). */
+/** Ferme l'application (TV et Android). */
 export function exitApp() {
+  if (native.exit) {
+    native.exit();
+    return;
+  }
   try {
     if (window.tizen && window.tizen.application) window.tizen.application.getCurrentApplication().exit();
   } catch {
@@ -128,6 +153,8 @@ export function exitApp() {
 export function setPlaybackActive(active: boolean) {
   try {
     window.jellymax?.setPlaybackActive(active);
+    // Android : écran allumé, plein écran immersif et paysage pendant la lecture.
+    if (native.setPlayback) native.setPlayback(active);
   } catch {
     /* ignore */
   }

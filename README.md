@@ -5,7 +5,7 @@
 <h1 align="center">JellyMax</h1>
 
 <p align="center">
-  An HBO Max-inspired <a href="https://jellyfin.org">Jellyfin</a> client for Windows and Samsung TVs (Tizen).
+  An HBO Max-inspired <a href="https://jellyfin.org">Jellyfin</a> client for Windows, Android (phones and tablets) and Samsung TVs (Tizen).
 </p>
 
 ---
@@ -50,6 +50,23 @@ On first launch, enter your Jellyfin server address (for example `http://192.168
 | M | Mute |
 | Esc | Exit the player |
 | F11 | App fullscreen |
+
+## Android (phones and tablets)
+
+### Install
+
+Download `JellyMax-x.y.z.apk` from the *Releases* page on your phone or tablet and open it. Android will ask you to allow installing apps from your browser or file manager the first time. Requires Android 6.0 or newer with an up-to-date Android System WebView.
+
+To update, install the newer APK over the existing one: your profiles and settings are kept.
+
+### Designed for touch
+
+- Bottom tab bar (Home, Search, Movies, Shows, My List, Profile) within thumb reach.
+- Layouts adapted to phones (portrait and landscape) and tablets.
+- Touch player: tap to show or hide the controls, double-tap the left or right side to skip back or forward 10 s (keep tapping to skip more), large seek bar.
+- Playback switches to full-screen landscape, hides the system bars and keeps the screen on.
+- Android Back button: closes menus and panels, leaves the player, goes back, then returns to Home and exits.
+- Lightweight: about 2 MB, with heavy visual effects reduced and off-screen rows skipped.
 
 ## Samsung TV (Tizen)
 
@@ -96,14 +113,18 @@ npm install
 npm run dev           # Electron app with hot reload
 npm run dist          # Windows installer + portable build in release/
 npm run build:tizen   # Samsung TV app in dist-tizen/
+npm run android:apk   # Android APK in release/
 ```
+
+The Android build uses [Capacitor](https://capacitorjs.com) and needs JDK 21 and the Android SDK (platform 35). Release APKs are signed with a key kept outside the repository: create a `keystore.properties` file (`storeFile`, `storePassword`, `keyAlias`, `keyPassword`) in `~/.jellymax/`, or point the `JELLYMAX_KEYSTORE_PROPERTIES` environment variable to it. Without it, an unsigned APK is produced.
 
 ### Structure
 
 ```
 electron/          Windows main process (window, fullscreen, sleep prevention)
 tizen/             Samsung TV manifest (config.xml) and icon
-scripts/           dev launcher, Tizen build and packaging
+android/           Android project (Capacitor), with the native playback plugin
+scripts/           dev launcher, Tizen and Android builds and packaging
 src/api/           Jellyfin client, device profile, recommendations
 src/components/    UI (sidebar, rows, cards, avatars…)
 src/pages/         screens (profiles, home, movies, shows, details, player…)
@@ -112,7 +133,7 @@ src/state/         profiles and settings
 src/i18n.ts        French / English translations
 ```
 
-The TV build uses the same code as Windows: `vite build --mode tizen` produces a single classic script targeting the TV browser (Chromium 69+), and adapts the stylesheet for older TVs.
+All platforms share the same code; the touch layout lives in `src/styles/mobile.css`. The TV build (`vite build --mode tizen`) produces a single classic script targeting the TV browser (Chromium 69+), and adapts the stylesheet for older TVs.
 
 ## Privacy
 

@@ -4,6 +4,11 @@ node_modules/
 # Builds
 dist/
 dist-tizen/
+dist-android/
+*.apk
+*.jks
+*.keystore
+keystore.properties
 release/
 *.wgt
 .buildResult/
