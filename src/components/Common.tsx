@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { api } from '../api/client';
 import { t } from '../i18n';
-import { isBackKey } from '../platform';
+import { animateScrollTo } from '../nav/spatial';
+import { isBackKey, isTV } from '../platform';
 import { Check, ChevronDown } from './Icons';
 
 /** Méduse du logo JellyMax, en vectoriel. */
@@ -158,7 +159,13 @@ export function Dropdown<T extends string | number>({
         ref.current &&
         ((ref.current.querySelector('.dropdown__opt.is-active') as HTMLElement | null) ||
           (ref.current.querySelector('.dropdown__opt') as HTMLElement | null));
-      if (el) el.focus({ preventScroll: false });
+      if (el) el.focus({ preventScroll: isTV });
+      // TV : la page descend pour que la liste ouverte soit entièrement visible.
+      const menu = isTV && ref.current && (ref.current.querySelector('.dropdown__menu') as HTMLElement | null);
+      if (menu) {
+        const overflow = menu.getBoundingClientRect().bottom + 32 - window.innerHeight;
+        if (overflow > 0) animateScrollTo(window.scrollY + overflow);
+      }
     });
     return () => {
       cancelAnimationFrame(raf);

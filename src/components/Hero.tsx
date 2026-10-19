@@ -62,7 +62,7 @@ export function Hero({ items }: { items: BaseItem[] }) {
       // TV : pas de changement de bannière (et de décodage d'image) quand elle est hors de l'écran.
       if (isTV && window.scrollY > window.innerHeight * 0.5) setWait((w) => w + 1);
       else setIndex((i) => (i + 1) % items.length);
-    }, 9000);
+    }, isTV ? 10000 : 9000);
     return () => clearTimeout(t);
   }, [index, paused, items.length, wait]);
 
@@ -97,8 +97,9 @@ export function Hero({ items }: { items: BaseItem[] }) {
       className={`hero ${paused ? 'is-paused' : ''}`}
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
-      onFocus={() => setPaused(true)}
-      onBlur={() => setPaused(false)}
+      // TV : le bouton Lecture a le focus dès l'ouverture, la bannière doit quand même défiler.
+      onFocus={isTV ? undefined : () => setPaused(true)}
+      onBlur={isTV ? undefined : () => setPaused(false)}
     >
       {items.map((it, i) => {
         // TV : une seule grande image en mémoire (celle affichée), sans fondu enchaîné.

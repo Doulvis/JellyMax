@@ -44,14 +44,55 @@ function rectInViewport(r: DOMRect) {
   return r.bottom > 0 && r.top < window.innerHeight && r.right > 0 && r.left < window.innerWidth;
 }
 
+let scrollAnim = 0;
+
+/**
+ * Défilement vertical animé de la page (TV). Le défilement natif "smooth" s'accumule quand on enchaîne
+ * les appuis ; ici chaque appui reprend l'animation depuis la position actuelle, avec une durée courte.
+ */
+export function animateScrollTo(target: number, duration = 220) {
+  if (scrollAnim) cancelAnimationFrame(scrollAnim);
+  scrollAnim = 0;
+  const max = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+  const to = Math.max(0, Math.min(max, Math.round(target)));
+  const from = window.scrollY;
+  if (Math.abs(to - from) < 2) return;
+  const start = performance.now();
+  const step = (now: number) => {
+    const p = Math.min(1, (now - start) / duration);
+    const eased = 1 - Math.pow(1 - p, 3);
+    window.scrollTo(0, Math.round(from + (to - from) * eased));
+    scrollAnim = p < 1 ? requestAnimationFrame(step) : 0;
+  };
+  scrollAnim = requestAnimationFrame(step);
+}
+
 function focusEl(el: HTMLElement, dir: Dir | null, instant: boolean) {
   if (!el.closest(SIDENAV)) lastMain = el;
   el.focus({ preventScroll: true });
   const vertical = dir === 'up' || dir === 'down';
-  // TV : défilement immédiat, l'animation fluide est trop coûteuse pour le processeur des TV.
+  // TV, changement de carrousel : alignement horizontal immédiat puis défilement vertical animé.
+  if (isTV && vertical && !instant && scopeRoot() === document && el.closest('.rail, .hero')) {
+    const from = window.scrollY;
+    if (scrollAnim) cancelAnimationFrame(scrollAnim);
+    scrollAnim = 0;
+    el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    const r = el.getBoundingClientRect();
+    const target = window.scrollY + r.top + r.height / 2 - window.innerHeight / 2;
+    window.scrollTo(0, from);
+    animateScrollTo(target);
+    return;
+  }
+  if (isTV && scrollAnim) {
+    cancelAnimationFrame(scrollAnim);
+    scrollAnim = 0;
+  }
+  // TV : défilement immédiat ailleurs, l'animation fluide native est trop coûteuse pour le processeur des TV.
   const behavior = instant || isTV ? 'auto' : 'smooth';
+  // Options d'une liste déroulante : on ne recentre pas la page à chaque option.
+  const block = vertical && !el.closest('.dropdown__menu') ? 'center' : 'nearest';
   try {
-    el.scrollIntoView({ block: vertical ? 'center' : 'nearest', inline: 'nearest', behavior });
+    el.scrollIntoView({ block, inline: 'nearest', behavior });
   } catch {
     el.scrollIntoView(false);
   }
