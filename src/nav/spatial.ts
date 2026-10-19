@@ -145,9 +145,19 @@ export function moveFocus(dir: Dir, instant = false): boolean {
     const content = list.filter((c) => !c.el.closest(SIDENAV));
     if (dir !== 'left') list = content;
     else {
-      const target = pick(content, cur!, cur!.getBoundingClientRect(), dir);
+      // ◀ ne reste dans le contenu que vers un élément de la même ligne ; sinon (début d'un carrousel,
+      // première colonne d'une grille…) on passe à la barre latérale, sur la rubrique de la page actuelle.
+      const c = cur!.getBoundingClientRect();
+      const sameRow = content.filter((x) => overlapGap(c.top, c.bottom, x.r.top, x.r.bottom) === 0);
+      const target = pick(sameRow, cur!, c, dir);
       if (target) {
         focusEl(target, dir, instant);
+        return true;
+      }
+      const side = document.querySelector<HTMLElement>(`${SIDENAV} .sidenav__item.active`) ||
+        document.querySelector<HTMLElement>(`${SIDENAV} .sidenav__item`);
+      if (side) {
+        focusEl(side, dir, instant);
         return true;
       }
     }
