@@ -10,6 +10,24 @@
 
 ---
 
+## Screenshots
+
+<p align="center">
+  <img src="docs/screenshots/windows-home.jpg" alt="Home screen on Windows" width="100%" />
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/windows-detail.jpg" alt="Movie page on Windows" width="49%" />
+  <img src="docs/screenshots/tv-home.jpg" alt="Home screen on a Samsung TV" width="49%" />
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/android-home.jpg" alt="Home screen on Android" width="32%" />
+  <img src="docs/screenshots/android-detail.jpg" alt="Movie page on Android" width="32%" />
+</p>
+
+<p align="center"><sub>Windows home screen, movie page on Windows, Samsung TV home screen, and the Android app. Shown with the public-domain movies of the <a href="https://demo.jellyfin.org/stable">Jellyfin demo server</a>.</sub></p>
+
 ## Features
 
 - **Multiple profiles**: add as many accounts as you like, even on different servers, and pick one at launch ("Who's watching?"). You can also skip the picker and reopen the last profile.
