@@ -111,8 +111,8 @@ function fileNameFor(item: BaseItem): string {
 }
 
 function sourceUrl(e: DownloadEntry) {
-  // `ApiKey` pour les serveurs récents (qui refusent `api_key` ici), `api_key` pour les plus anciens.
-  return api.buildUrl(`/Items/${e.itemId}/Download`, { ApiKey: api.token, api_key: api.token }, e.serverUrl);
+  // `ApiKey` (Jellyfin 10.8+) : `api_key` est refusé depuis Jellyfin 12.
+  return api.buildUrl(`/Items/${e.itemId}/Download`, { ApiKey: api.token }, e.serverUrl);
 }
 
 /** Vérifie que le compte a le droit de télécharger avant de lancer le transfert (message clair sinon). */

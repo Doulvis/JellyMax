@@ -53,15 +53,17 @@ export default function Login() {
     navigate('/', { replace: true });
   };
 
-  const login = async (name: string, pw: string) => {
+  const login = async (name: string, pw: string, onBadCreds?: () => void) => {
     setBusy(true);
     setError(null);
     try {
       finish(await api.authenticate(name, pw));
     } catch (e) {
       setBusy(false);
-      if (e instanceof ApiError && e.status === 401) setError(t('login.badCreds'));
-      else setError(errorMessage(e));
+      if (e instanceof ApiError && e.status === 401) {
+        if (onBadCreds) onBadCreds();
+        else setError(t('login.badCreds'));
+      } else setError(errorMessage(e));
     }
   };
 
@@ -69,7 +71,9 @@ export default function Login() {
     setError(null);
     setSelected(u);
     setPassword('');
-    if (!u.HasPassword) login(u.Name, '');
+    // HasPassword n'est plus fiable depuis Jellyfin 12 : on tente sans mot de passe
+    // et on demande le mot de passe si le serveur refuse.
+    if (u.HasPassword === false) login(u.Name, '', () => setMode('password'));
     else setMode('password');
   };
 

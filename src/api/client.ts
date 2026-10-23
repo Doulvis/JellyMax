@@ -389,19 +389,23 @@ export class JellyfinApi {
       static: true,
       mediaSourceId: source.Id,
       deviceId,
-      api_key: this.token,
+      ApiKey: this.token,
       Tag: source.ETag,
       LiveStreamId: source.LiveStreamId,
     });
   }
-  /** Rend absolue une URL relative renvoyée par le serveur et y ajoute le jeton si besoin. */
+  /**
+   * Rend absolue une URL relative renvoyée par le serveur et y ajoute le jeton si besoin.
+   * Jellyfin 12 n'accepte plus `api_key` (autorisation « legacy ») : on utilise `ApiKey`, lu depuis 10.8.
+   */
   absolute(url: string) {
-    const full = /^https?:\/\//i.test(url) ? url : this.baseUrl + (url.charAt(0) === '/' ? '' : '/') + url;
-    if (/[?&](api_key|ApiKey)=/i.test(full)) return full;
-    return full + (full.indexOf('?') >= 0 ? '&' : '?') + 'api_key=' + encodeURIComponent(this.token);
+    let full = /^https?:\/\//i.test(url) ? url : this.baseUrl + (url.charAt(0) === '/' ? '' : '/') + url;
+    full = full.replace(/([?&])api_key=/gi, '$1ApiKey=');
+    if (/[?&]ApiKey=/i.test(full)) return full;
+    return full + (full.indexOf('?') >= 0 ? '&' : '?') + 'ApiKey=' + encodeURIComponent(this.token);
   }
   trickplayUrl(itemId: string, width: number, index: number, mediaSourceId: string) {
-    return this.buildUrl(`/Videos/${itemId}/Trickplay/${width}/${index}.jpg`, { mediaSourceId, api_key: this.token });
+    return this.buildUrl(`/Videos/${itemId}/Trickplay/${width}/${index}.jpg`, { mediaSourceId, ApiKey: this.token });
   }
 }
 

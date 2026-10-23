@@ -165,9 +165,9 @@ function ensureSocket(): Promise<void> {
     ws.close();
   }
   wsKey = key;
-  // `ApiKey` pour les serveurs récents (qui refusent `api_key` ici), `api_key` pour les plus anciens.
+  // `ApiKey` (Jellyfin 10.8+) : `api_key` est refusé depuis Jellyfin 12.
   const token = encodeURIComponent(api.token);
-  const url = api.baseUrl.replace(/^http/i, 'ws') + `/socket?ApiKey=${token}&api_key=${token}&deviceId=${encodeURIComponent(deviceId)}`;
+  const url = api.baseUrl.replace(/^http/i, 'ws') + `/socket?ApiKey=${token}&deviceId=${encodeURIComponent(deviceId)}`;
   const socket = new WebSocket(url);
   ws = socket;
   wsReady = new Promise((resolve, reject) => {
