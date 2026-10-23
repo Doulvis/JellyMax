@@ -2,6 +2,15 @@
 
 import type { CastCommand, CastDevice, CastMedia, CastStatus } from './cast/cast';
 
+/** Progression d'un téléchargement envoyée par la couche Windows. */
+export interface NativeDownloadProgress {
+  key: string;
+  state: 'progressing' | 'completed' | 'failed' | 'cancelled';
+  received: number;
+  total: number;
+  file: string;
+}
+
 interface JellyMaxBridge {
   platform: 'electron';
   setPlaybackActive(active: boolean): void;
@@ -16,6 +25,15 @@ interface JellyMaxBridge {
     current(): Promise<{ id: string; name: string } | null>;
     onDevices(cb: (list: CastDevice[]) => void): () => void;
     onStatus(cb: (s: CastStatus) => void): () => void;
+  };
+  downloads?: {
+    start(job: { key: string; url: string; fileName: string }): Promise<{ file: string }>;
+    cancel(key: string): Promise<void>;
+    remove(file: string): Promise<void>;
+    exists(file: string): Promise<boolean>;
+    fileUrl(file: string): Promise<string>;
+    openFolder(): Promise<string>;
+    onProgress(cb: (p: NativeDownloadProgress) => void): () => void;
   };
 }
 
@@ -69,6 +87,14 @@ export const platformLabel = isElectron ? 'Windows' : isTV ? 'Samsung TV (Tizen)
 export const native: {
   setPlayback?: (active: boolean) => void;
   exit?: () => void;
+  /** Téléchargements Android (gestionnaire de téléchargements du système). */
+  downloads?: {
+    start(url: string, fileName: string, title: string): Promise<{ id: string; file: string }>;
+    status(ids: string[]): Promise<{ id: string; state: 'progressing' | 'completed' | 'failed'; received: number; total: number }[]>;
+    remove(id: string | undefined, file: string | undefined): Promise<void>;
+    exists(file: string): Promise<boolean>;
+    fileUrl(file: string): Promise<string>;
+  };
 } = {};
 
 // Touches de la télécommande à demander explicitement au système (sinon elles ne sont pas transmises).

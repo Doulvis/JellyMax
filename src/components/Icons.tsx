@@ -242,3 +242,27 @@ export const Key = (p: P) => (
     <path d="M10.8 12.2L20 3M16 7l3 3M14 9l2 2" />
   </Svg>
 );
+export const Download = (p: P) => (
+  <Svg {...p}>
+    <path d="M12 4v11M7 10.5l5 5 5-5M5 20h14" />
+  </Svg>
+);
+export const DownloadDone = (p: P) => (
+  <Svg {...p}>
+    <path d="M5 20h14M7.5 10.5l3 3 6-6.5" />
+  </Svg>
+);
+export const Folder = (p: P) => (
+  <Svg {...p}>
+    <path d="M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+  </Svg>
+);
+/** Regarder ensemble (SyncPlay) : deux personnes devant un écran. */
+export const WatchTogether = (p: P) => (
+  <Svg {...p}>
+    <rect x="3" y="3.5" width="18" height="11" rx="2" />
+    <circle cx="9" cy="18" r="1.6" />
+    <circle cx="15" cy="18" r="1.6" />
+    <path d="M10.5 7.4v3.2l2.8-1.6z" fill="currentColor" stroke="none" />
+  </Svg>
+);

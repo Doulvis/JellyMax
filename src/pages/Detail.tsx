@@ -6,9 +6,11 @@ import { firstEpisode } from '../api/playable';
 import type { BaseItem, UserData } from '../api/types';
 import { ItemGrid } from '../components/Card';
 import { Dropdown, Empty, ErrorState, PageLoader, Spinner, Tabs } from '../components/Common';
+import { DownloadPill, EpisodeDownloadButton, SeasonDownloadPill } from '../components/DownloadButton';
 import { MetaLine } from '../components/Hero';
-import { Check, Eye, Film, Heart, HeartFill, Play, Restart } from '../components/Icons';
+import { Check, Eye, Film, Heart, HeartFill, Play, Restart, WatchTogether } from '../components/Icons';
 import { t } from '../i18n';
+import { openWatchTogether } from '../syncplay/syncplay';
 import { isTV } from '../platform';
 import {
   episodeCode,
@@ -267,6 +269,14 @@ function ItemView({ item, initialSeason }: { item: BaseItem; initialSeason: stri
                 <span>{t('detail.trailer')}</span>
               </button>
             )}
+            {target && (
+              <button className="icon-pill" onClick={() => openWatchTogether({ itemId: target.id, name: item.Name })}>
+                <WatchTogether />
+                <span>{t('sp.watchTogether')}</span>
+              </button>
+            )}
+            {!isSeries && !isBoxSet && item.MediaSources && item.MediaSources.length > 0 && <DownloadPill item={item} />}
+            {isSeries && <SeasonDownloadPill episodes={episodes} />}
           </div>
           {target && target.percent > 0 && target.percent < 100 && (
             <div className="detail__progress">
@@ -361,6 +371,7 @@ function EpisodeRow({ ep, onTogglePlayed }: { ep: BaseItem; onTogglePlayed(): vo
         {meta && <div className="ep__meta">{meta}</div>}
         {ep.Overview && <p className="ep__overview">{ep.Overview}</p>}
       </div>
+      <EpisodeDownloadButton ep={ep} />
       <button
         className={`ep__watched ${ud.Played ? 'is-on' : ''}`}
         onClick={onTogglePlayed}

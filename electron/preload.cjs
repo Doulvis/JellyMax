@@ -22,4 +22,17 @@ contextBridge.exposeInMainWorld('jellymax', {
       return () => ipcRenderer.removeListener('cast-status', handler);
     },
   },
+  downloads: {
+    start: (job) => ipcRenderer.invoke('dl-start', job),
+    cancel: (key) => ipcRenderer.invoke('dl-cancel', key),
+    remove: (file) => ipcRenderer.invoke('dl-remove', file),
+    exists: (file) => ipcRenderer.invoke('dl-exists', file),
+    fileUrl: (file) => ipcRenderer.invoke('dl-url', file),
+    openFolder: () => ipcRenderer.invoke('dl-open-folder'),
+    onProgress: (cb) => {
+      const handler = (_e, p) => cb(p);
+      ipcRenderer.on('dl-progress', handler);
+      return () => ipcRenderer.removeListener('dl-progress', handler);
+    },
+  },
 });

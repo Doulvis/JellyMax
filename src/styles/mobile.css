@@ -337,6 +337,49 @@ html.is-mobile {
   bottom: 1rem;
   transform: translateX(-50%);
 }
+/* Bannière glissable : un titre par "page", aimanté au relâchement du doigt. */
+.hero-swipe__track {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+.hero-swipe__slide {
+  position: relative;
+  flex: 0 0 100%;
+  height: 100%;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  overflow: hidden;
+}
+.hero-swipe__bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: block;
+  background: #0b0b12;
+}
+.hero-swipe__bg img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 20%;
+}
+.hero-swipe .hero__shade {
+  pointer-events: none;
+}
+.hero-swipe .hero__dots button.is-active::after {
+  animation: none;
+}
 .is-mobile .hero ~ .rails {
   margin-top: 0.4rem;
 }
@@ -858,4 +901,33 @@ html.is-mobile {
   right: 0.75rem;
   width: auto;
   max-width: none;
+}
+
+/* ---------- Téléchargements ---------- */
+@media (max-width: 599px) {
+  .is-mobile .dl-row {
+    gap: 0.8rem;
+  }
+  .is-mobile .dl-row__thumb {
+    width: 8.5rem;
+  }
+  .is-mobile .dl-row__title {
+    font-size: 0.92rem;
+  }
+  .is-mobile .dl-row__sub {
+    font-size: 0.78rem;
+  }
+  .is-mobile .dl-row__actions {
+    flex-direction: column;
+  }
+}
+.is-mobile .dl-row__play {
+  opacity: 1;
+}
+.is-mobile .toasts {
+  bottom: calc(var(--tabbar) + 2rem + var(--safe-bottom));
+}
+.is-mobile .toast {
+  white-space: normal;
+  max-width: calc(100vw - 2rem);
 }

@@ -1,6 +1,7 @@
 const { app, BrowserWindow, Menu, ipcMain, powerSaveBlocker, screen, session, shell } = require('electron');
 const fs = require('node:fs');
 const path = require('node:path');
+const { pathToFileURL } = require('node:url');
 
 // Identifiant Windows : regroupement correct dans la barre des tâches et les notifications.
 app.setAppUserModelId('app.jellymax.desktop');
@@ -178,6 +179,80 @@ ipcMain.handle('cast-disconnect', () => (castSession ? castSession.stop() : unde
 // Après un rechargement de la page : session encore active ?
 ipcMain.handle('cast-current', () => (castSession ? { id: castSession.device.id, name: castSession.device.name } : null));
 
+// ---- Téléchargements (films et épisodes hors connexion), dans Vidéos\JellyMax ----
+const downloadDir = () => path.join(app.getPath('videos'), 'JellyMax');
+const pendingDownloads = new Map(); // URL demandée -> { key, file }
+const activeDownloads = new Map(); // clé -> DownloadItem
+
+function insideDownloadDir(file) {
+  const dir = path.resolve(downloadDir()) + path.sep;
+  return typeof file === 'string' && path.resolve(file).startsWith(dir);
+}
+
+function uniqueFile(name) {
+  const safe = String(name).replace(/[<>:"/\\|?*\u0000-\u001f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 180) || 'video';
+  const ext = path.extname(safe);
+  const base = safe.slice(0, safe.length - ext.length);
+  let file = path.join(downloadDir(), safe);
+  for (let i = 2; fs.existsSync(file); i++) file = path.join(downloadDir(), `${base} (${i})${ext}`);
+  return file;
+}
+
+function trackDownload(item) {
+  const url = item.getURLChain()[0] || item.getURL();
+  const job = pendingDownloads.get(url);
+  if (!job) return; // autre téléchargement : comportement par défaut
+  pendingDownloads.delete(url);
+  item.setSavePath(job.file);
+  activeDownloads.set(job.key, item);
+  const send = (state) => {
+    if (win && !win.isDestroyed()) {
+      win.webContents.send('dl-progress', {
+        key: job.key,
+        state,
+        received: item.getReceivedBytes(),
+        total: item.getTotalBytes(),
+        file: job.file,
+      });
+    }
+  };
+  let last = 0;
+  item.on('updated', (_e, state) => {
+    // Coupure réseau : on reprend automatiquement quand c'est possible.
+    if (state === 'interrupted' && item.canResume()) setTimeout(() => item.canResume() && item.resume(), 3000);
+    const now = Date.now();
+    if (now - last < 500) return;
+    last = now;
+    send('progressing');
+  });
+  item.once('done', (_e, state) => {
+    activeDownloads.delete(job.key);
+    send(state === 'completed' ? 'completed' : state === 'cancelled' ? 'cancelled' : 'failed');
+  });
+}
+
+ipcMain.handle('dl-start', (_e, job) => {
+  if (!win) throw new Error('no window');
+  fs.mkdirSync(downloadDir(), { recursive: true });
+  const file = uniqueFile(job.fileName);
+  pendingDownloads.set(job.url, { key: job.key, file });
+  win.webContents.downloadURL(job.url);
+  return { file };
+});
+ipcMain.handle('dl-cancel', (_e, key) => {
+  const item = activeDownloads.get(key);
+  if (item) item.cancel();
+});
+ipcMain.handle('dl-remove', (_e, file) => {
+  if (insideDownloadDir(file)) fs.rmSync(file, { force: true });
+});
+ipcMain.handle('dl-exists', (_e, file) => insideDownloadDir(file) && fs.existsSync(file));
+ipcMain.handle('dl-url', (_e, file) => (insideDownloadDir(file) ? pathToFileURL(file).href : ''));
+ipcMain.handle('dl-open-folder', () => {
+  fs.mkdirSync(downloadDir(), { recursive: true });
+  return shell.openPath(downloadDir());
+});
+
 app.on('second-instance', () => {
   if (!win) return;
   if (win.isMinimized()) win.restore();
@@ -197,6 +272,7 @@ app.whenReady().then(() => {
     }
     callback({ responseHeaders: headers });
   });
+  session.defaultSession.on('will-download', (_e, item) => trackDownload(item));
   createWindow();
 });
 

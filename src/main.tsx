@@ -11,13 +11,19 @@ import './styles/mobile.css';
 import { createRoot } from 'react-dom/client';
 import App from './App';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { initDownloads } from './downloads/store';
 import { initSpatialNav } from './nav/spatial';
 import { initPlatform, isAndroid } from './platform';
 import { useSettings } from './state/settings';
 
 initPlatform();
 initSpatialNav();
-if (isAndroid) import('./android').then((m) => m.initAndroid());
+if (isAndroid) {
+  import('./android').then((m) => {
+    m.initAndroid();
+    initDownloads();
+  });
+} else initDownloads();
 
 window.addEventListener('unhandledrejection', (e) => {
   console.warn('[JellyMax] promesse non gérée', e.reason);

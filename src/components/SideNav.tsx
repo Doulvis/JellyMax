@@ -5,7 +5,9 @@ import { isBackKey, isMobile } from '../platform';
 import { useAuth } from '../state/auth';
 import { AvatarPicker } from './AvatarPicker';
 import { Avatar, LogoMark } from './Common';
-import { ChevronLeft, Film, Gear, Heart, Home, Logout, Pencil, Search, Tv, Users } from './Icons';
+import { downloadsSupported } from '../downloads/store';
+import { openWatchTogether, useSyncPlay } from '../syncplay/syncplay';
+import { ChevronLeft, Download, Film, Gear, Heart, Home, Logout, Pencil, Search, Tv, Users, WatchTogether } from './Icons';
 
 const ITEMS = [
   { to: '/search', key: 'nav.search', Icon: Search, end: false },
@@ -13,11 +15,15 @@ const ITEMS = [
   { to: '/movies', key: 'nav.movies', Icon: Film, end: false },
   { to: '/shows', key: 'nav.shows', Icon: Tv, end: false },
   { to: '/mylist', key: 'nav.mylist', Icon: Heart, end: false },
+  { to: '/downloads', key: 'nav.downloads', Icon: Download, end: false },
 ] as const;
 
+// Téléchargements : Windows et Android uniquement.
+const NAV_ITEMS = ITEMS.filter((i) => i.to !== '/downloads' || downloadsSupported);
+
 // Ordre des onglets sur mobile : l'accueil en premier, comme les applications de streaming.
-const TAB_ITEMS = [ITEMS[1], ITEMS[2], ITEMS[3], ITEMS[4], ITEMS[0]];
-const TAB_PATHS = ['/', '/search', '/movies', '/shows', '/mylist', '/settings'];
+const TAB_ITEMS = [ITEMS[1], ITEMS[2], ITEMS[3], ITEMS[4], ITEMS[5], ITEMS[0]].filter((i) => NAV_ITEMS.indexOf(i) >= 0);
+const TAB_PATHS = ['/', '/search', '/movies', '/shows', '/mylist', '/downloads', '/settings'];
 
 /**
  * Mobile : la barre du haut devient opaque dès qu'on fait défiler, et la barre d'onglets flottante
@@ -60,6 +66,7 @@ export function SideNav() {
   const menuRef = useRef<HTMLDivElement>(null);
   const { pathname } = useLocation();
   const chrome = useScrollChrome(isMobile);
+  const sp = useSyncPlay();
 
   // Le menu du profil se referme quand on change de page.
   useEffect(() => setMenu(false), [pathname]);
@@ -115,6 +122,14 @@ export function SideNav() {
         }}
       >
         <Pencil /> {t('profiles.editAvatar')}
+      </button>
+      <button
+        onClick={() => {
+          setMenu(false);
+          openWatchTogether();
+        }}
+      >
+        <WatchTogether /> {sp.group ? t('sp.inGroupMenu', { name: sp.group.GroupName }) : t('sp.watchTogether')}
       </button>
       <Link to="/settings" onClick={() => setMenu(false)}>
         <Gear /> {t('nav.settings')}
@@ -202,7 +217,7 @@ export function SideNav() {
         </Link>
 
         <nav className="sidenav__nav">
-          {ITEMS.map(({ to, key, Icon, end }) => {
+          {NAV_ITEMS.map(({ to, key, Icon, end }) => {
             const label = t(key);
             return (
               <NavLink

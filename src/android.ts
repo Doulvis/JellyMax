@@ -7,6 +7,13 @@ import { native } from './platform';
 /** Plugin natif de l'application (android/app/src/main/java/app/jellymax/mobile/JellyMaxSystemPlugin.java). */
 interface JellyMaxSystem {
   setPlayback(options: { active: boolean }): Promise<void>;
+  download(options: { url: string; fileName: string; title: string }): Promise<{ id: string; file: string }>;
+  downloadStatus(options: { ids: string[] }): Promise<{
+    items: { id: string; state: 'progressing' | 'completed' | 'failed'; received: number; total: number }[];
+  }>;
+  removeDownload(options: { id?: string; file?: string }): Promise<void>;
+  downloadExists(options: { file: string }): Promise<{ exists: boolean }>;
+  downloadUrl(options: { file: string }): Promise<{ url: string }>;
 }
 const system = registerPlugin<JellyMaxSystem>('JellyMaxSystem');
 
@@ -60,6 +67,13 @@ export function initAndroid() {
   };
   native.exit = () => {
     App.exitApp().catch(() => {});
+  };
+  native.downloads = {
+    start: (url, fileName, title) => system.download({ url, fileName, title }),
+    status: (ids) => system.downloadStatus({ ids }).then((r) => r.items || []),
+    remove: (id, file) => system.removeDownload({ id, file }),
+    exists: (file) => system.downloadExists({ file }).then((r) => !!r.exists),
+    fileUrl: (file) => system.downloadUrl({ file }).then((r) => r.url),
   };
 
   // Bouton "Retour" d'Android : transmis comme la touche "Précédent" d'un clavier, déjà gérée partout

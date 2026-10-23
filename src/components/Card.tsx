@@ -69,7 +69,7 @@ export const Card = memo(function Card({
             {logo ? <img src={logo} alt="" loading="lazy" onError={() => setLogoFailed(true)} /> : <span>{item.Name}</span>}
           </div>
         )}
-        {ud.Played && item.Type !== 'Series' && action !== 'play' && (
+        {ud.Played && action !== 'play' && (
           <span className="card__badge" aria-label={t('common.watched')}>
             <Check />
           </span>

@@ -56,6 +56,8 @@ export interface MediaSource {
   DefaultSubtitleStreamIndex?: number;
   ETag?: string;
   Bitrate?: number;
+  Size?: number;
+  Path?: string;
   LiveStreamId?: string;
 }
 

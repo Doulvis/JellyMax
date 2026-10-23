@@ -27,6 +27,19 @@ import { getSettings, updateSettings, useSettings } from '../state/settings';
 import { subtitleVars } from '../utils/subtitles';
 import { episodeCode, errorMessage, formatClock, formatRuntime, TPS } from '../utils/format';
 import { activeCueHtml, parseVtt, type Cue } from '../utils/vtt';
+import { findDownload, localUrl, setOfflinePosition, type DownloadEntry } from '../downloads/store';
+import {
+  attachPlayer,
+  detachPlayer,
+  inGroup,
+  openWatchTogether,
+  reportBuffering,
+  requestNext,
+  requestPlayPause,
+  requestSeek,
+  useSyncPlay,
+  type PlayerAdapter,
+} from '../syncplay/syncplay';
 
 type PlayMethod = 'DirectPlay' | 'DirectStream' | 'Transcode';
 type Panel = null | 'tracks' | 'quality' | 'episodes' | 'cast';
@@ -99,6 +112,9 @@ export default function Player() {
   const hideTimerRef = useRef<number | undefined>(undefined);
   const stallTimerRef = useRef<number | undefined>(undefined);
   const skippedRef = useRef<Set<string>>(new Set());
+  /** Lecture du fichier téléchargé (hors connexion). */
+  const offlineRef = useRef<DownloadEntry | null>(null);
+  const sp = useSyncPlay();
 
   const [item, setItem] = useState<BaseItem | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -151,9 +167,16 @@ export default function Player() {
     };
   };
 
+  const saveOfflinePosition = () => {
+    const v = videoRef.current;
+    const s = sessionRef.current;
+    if (offlineRef.current && s && v && v.currentTime > 0) setOfflinePosition(s.itemId, v.currentTime);
+  };
+
   const reportProgress = () => {
     const p = payload();
     if (p) api.reportProgress(p).catch(() => {});
+    saveOfflinePosition();
   };
 
   const endSession = (final: boolean) => {
@@ -161,6 +184,7 @@ export default function Player() {
     if (!s) return;
     const p = payload();
     if (final && p) api.reportStopped(p).catch(() => {});
+    if (final) saveOfflinePosition();
     if (s.playMethod !== 'DirectPlay') api.stopEncoding(s.playSessionId).catch(() => {});
     sessionRef.current = null;
   };
@@ -220,6 +244,58 @@ export default function Player() {
     const audios = fileStreams.filter((s) => s.Type === 'Audio');
     const fileDefaultAudio = audios.find((a) => a.IsDefault) || audios[0];
     if (aIdx != null && fileDefaultAudio && aIdx !== fileDefaultAudio.Index) level = Math.max(level, 1);
+
+    // Regarder ensemble : le groupe décide du moment où la lecture démarre.
+    const autoplay = () => {
+      if (!inGroup()) video.play().catch(() => {});
+    };
+
+    const offline = offlineRef.current;
+    if (offline) {
+      try {
+        const url = await localUrl(offline);
+        if (loadId !== loadIdRef.current) return;
+        const source = it.MediaSources && it.MediaSources[0];
+        sessionRef.current = {
+          itemId: it.Id,
+          mediaSourceId: source ? source.Id : it.Id,
+          playSessionId: '',
+          playMethod: 'DirectPlay',
+          level: 2,
+          audioIndex: aIdx,
+          subIndex: -1,
+          burnedSub: false,
+        };
+        setStreams((source && source.MediaStreams) || []);
+        setMethod('DirectPlay');
+        const st = getSettings();
+        video.volume = st.volume;
+        video.muted = st.muted;
+        video.src = url;
+        if (startSec > 0) {
+          video.addEventListener(
+            'loadedmetadata',
+            () => {
+              try {
+                video.currentTime = startSec;
+              } catch {
+                /* ignore */
+              }
+            },
+            { once: true },
+          );
+        }
+        autoplay();
+        const p = payload();
+        if (p) api.reportStart(p).catch(() => {});
+        setPlaybackActive(true);
+      } catch (e) {
+        if (loadId !== loadIdRef.current) return;
+        setBuffering(false);
+        setError(errorMessage(e));
+      }
+      return;
+    }
 
     try {
       const info = await api.playbackInfo(it.Id, {
@@ -298,9 +374,7 @@ export default function Player() {
         const hls = new Hls(config);
         hlsRef.current = hls;
         hls.on(Hls.Events.ERROR, (_evt, data) => actions.current.onHlsError(data, loadId));
-        hls.on(Hls.Events.MANIFEST_PARSED, () => {
-          video.play().catch(() => {});
-        });
+        hls.on(Hls.Events.MANIFEST_PARSED, autoplay);
         hls.loadSource(url);
         hls.attachMedia(video);
       } else {
@@ -318,7 +392,7 @@ export default function Player() {
             { once: true },
           );
         }
-        video.play().catch(() => {});
+        autoplay();
       }
 
       if (sub && sub.DeliveryMethod === 'External' && sub.DeliveryUrl) loadSubtitles(api.absolute(sub.DeliveryUrl));
@@ -368,6 +442,13 @@ export default function Player() {
     const s = sessionRef.current;
     const level = s ? s.level : failLevelRef.current;
     const pos = v && v.currentTime > 1 ? v.currentTime : startPosRef.current;
+    if (offlineRef.current) {
+      endSession(true);
+      teardownMedia();
+      setBuffering(false);
+      setError(t('dl.err.format'));
+      return;
+    }
     if (level >= 2) {
       endSession(true);
       teardownMedia();
@@ -441,6 +522,10 @@ export default function Player() {
   const togglePlay = () => {
     const v = videoRef.current;
     if (!v) return;
+    if (inGroup()) {
+      requestPlayPause(v.paused);
+      return;
+    }
     if (v.paused) v.play().catch(() => {});
     else v.pause();
   };
@@ -450,6 +535,11 @@ export default function Player() {
     if (!v) return;
     const max = (isFinite(v.duration) && v.duration) || duration || Infinity;
     const target = Math.max(0, Math.min(sec, max - 0.5));
+    if (inGroup()) {
+      setTime(target);
+      requestSeek(target);
+      return;
+    }
     try {
       v.currentTime = target;
       setTime(target);
@@ -483,7 +573,8 @@ export default function Player() {
 
   const goNext = () => {
     const n = live.current.nextEp;
-    if (n) navigate(`/play/${n.Id}`, { replace: true });
+    if (n && inGroup()) requestNext(n.Id);
+    else if (n) navigate(`/play/${n.Id}`, { replace: true });
   };
 
   const selectAudio = (index: number) => {
@@ -599,28 +690,74 @@ export default function Player() {
     setMethod(null);
     skippedRef.current = new Set();
     failLevelRef.current = 0;
+    offlineRef.current = null;
+
+    const adapter: PlayerAdapter = {
+      itemId: id,
+      play: () => {
+        const v = videoRef.current;
+        if (v) v.play().catch(() => {});
+      },
+      pause: () => {
+        const v = videoRef.current;
+        if (v) v.pause();
+      },
+      seek: (sec) => {
+        const v = videoRef.current;
+        if (!v) return;
+        try {
+          v.currentTime = Math.max(0, sec);
+        } catch {
+          /* ignore */
+        }
+      },
+      currentTime: () => (videoRef.current ? videoRef.current.currentTime : 0),
+      isPaused: () => !videoRef.current || videoRef.current.paused,
+      isReady: () => !!videoRef.current && videoRef.current.readyState >= 3,
+      stop: () => actions.current.exit(),
+    };
 
     (async () => {
       try {
-        const it = await api.item(id);
+        // Titre téléchargé : lecture du fichier local, demandée (?offline=1) ou si le serveur est injoignable.
+        const dl = findDownload(id);
+        const done = dl && dl.status === 'done' ? dl : null;
+        let it: BaseItem;
+        if (done && searchParams.get('offline') === '1') {
+          offlineRef.current = done;
+          it = done.item;
+        } else {
+          try {
+            it = await api.item(id);
+          } catch (e) {
+            if (!done) throw e;
+            offlineRef.current = done;
+            it = done.item;
+          }
+        }
         if (cancelled) return;
         live.current.item = it;
         setItem(it);
         const src = it.MediaSources && it.MediaSources[0];
         const t = searchParams.get('t');
         const resumeTicks = (it.UserData && it.UserData.PlaybackPositionTicks) || 0;
-        const startSec = t != null ? Math.max(0, Number(t) || 0) : resumeTicks / TPS;
+        const offlinePos = offlineRef.current && offlineRef.current.position;
+        const startSec = t != null ? Math.max(0, Number(t) || 0) : offlinePos != null ? offlinePos : resumeTicks / TPS;
         const a = src && src.DefaultAudioStreamIndex != null ? src.DefaultAudioStreamIndex : undefined;
         const s = src && src.DefaultSubtitleStreamIndex != null ? src.DefaultSubtitleStreamIndex : -1;
         setAudioIndex(a);
         setSubIndex(s);
         live.current.audioIndex = a;
         live.current.subIndex = s;
+        attachPlayer(adapter, startSec);
         // Déjà en lecture sur l'appareil Cast (retour depuis la mini-barre) : rien à relancer.
         if (isCasting(it.Id)) setBuffering(false);
         else await actions.current.begin({ item: it, startSec, audioIndex: a, subIndex: s, level: 0 });
         if (cancelled) return;
-        api.segments(it.Id).then((r) => !cancelled && setSegments(r));
+        api
+          .segments(it.Id)
+          .then((r) => !cancelled && setSegments(r))
+          .catch(() => {});
         if (it.Type === 'Episode' && it.SeriesId) {
           api
             .episodes(it.SeriesId, { startItemId: it.Id, limit: 2 })
@@ -639,6 +776,7 @@ export default function Player() {
 
     return () => {
       cancelled = true;
+      detachPlayer(adapter);
       loadIdRef.current++;
       actions.current.endSession(true);
       actions.current.teardownMedia();
@@ -761,12 +899,14 @@ export default function Player() {
       }
       if (key === 'MediaPlay') {
         stop();
-        v.play().catch(() => {});
+        if (inGroup()) requestPlayPause(true);
+        else v.play().catch(() => {});
         return;
       }
       if (key === 'MediaPause') {
         stop();
-        v.pause();
+        if (inGroup()) requestPlayPause(false);
+        else v.pause();
         return;
       }
       if (key === 'MediaStop') {
@@ -941,6 +1081,7 @@ export default function Player() {
 
   const onWaiting = () => {
     setBuffering(true);
+    reportBuffering(true);
     window.clearTimeout(stallTimerRef.current);
     // Lecture directe bloquée trop longtemps (débit insuffisant) → on bascule en transcodage.
     stallTimerRef.current = window.setTimeout(() => {
@@ -952,6 +1093,7 @@ export default function Player() {
 
   const onPlaying = () => {
     setBuffering(false);
+    reportBuffering(false);
     window.clearTimeout(stallTimerRef.current);
     retryRef.current = { net: 0, media: 0 };
   };
@@ -1056,6 +1198,21 @@ export default function Player() {
             <div className="player__title">{title}</div>
             {subtitle && <div className="player__subtitle">{subtitle}</div>}
           </div>
+          {sp.group && (
+            <button className="player__group" onClick={() => openWatchTogether()}>
+              <I.Users /> {sp.group.GroupName} · {sp.group.Participants.length}
+            </button>
+          )}
+          {!sp.group && item && !offlineRef.current && (
+            <button
+              className="pbtn"
+              onClick={() => openWatchTogether({ itemId: item.Id, name: title || item.Name })}
+              aria-label={t('sp.watchTogether')}
+              title={t('sp.watchTogether')}
+            >
+              <I.WatchTogether />
+            </button>
+          )}
         </div>
 
         <div className="player__middle">

@@ -4,6 +4,7 @@ import { CastBar } from './cast/CastUI';
 import { SideNav } from './components/SideNav';
 import Catalog from './pages/Catalog';
 import Detail from './pages/Detail';
+import DownloadsPage from './pages/Downloads';
 import Home from './pages/Home';
 import Library from './pages/Library';
 import Login from './pages/Login';
@@ -15,6 +16,7 @@ import ServerConnect from './pages/ServerConnect';
 import SettingsPage from './pages/Settings';
 import { exitApp, isAndroid, isBackKey, isTV, keyName } from './platform';
 import { AuthProvider, useAuth } from './state/auth';
+import { WatchTogetherHost } from './syncplay/WatchTogether';
 
 // Le lecteur (et hls.js) n'est chargé qu'à la première lecture : démarrage plus rapide.
 const Player = lazy(() => import('./pages/Player'));
@@ -42,7 +44,13 @@ function MainLayout() {
   );
 }
 
-const TAB_ROOTS = ['/', '/search', '/movies', '/shows', '/mylist', '/settings'];
+/** Rendu uniquement avec un profil connecté. */
+function SessionOnly({ children }: { children: ReactElement }) {
+  const { session } = useAuth();
+  return session ? children : null;
+}
+
+const TAB_ROOTS = ['/', '/search', '/movies', '/shows', '/mylist', '/downloads', '/settings'];
 
 /** Bouton "précédent" de la souris ou du clavier, Alt+← */
 function BackHandler() {
@@ -88,6 +96,9 @@ export default function App() {
     <HashRouter>
       <AuthProvider>
         <BackHandler />
+        <SessionOnly>
+          <WatchTogetherHost />
+        </SessionOnly>
         <Routes>
           <Route path="/profiles" element={<Profiles />} />
           <Route path="/connect" element={<ServerConnect />} />
@@ -117,6 +128,7 @@ export default function App() {
             <Route path="person/:id" element={<PersonPage />} />
             <Route path="search" element={<SearchPage />} />
             <Route path="mylist" element={<MyList />} />
+            <Route path="downloads" element={<DownloadsPage />} />
             <Route path="settings" element={<SettingsPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
