@@ -52,13 +52,16 @@ interface SamsungWebApis {
 declare global {
   interface Window {
     jellymax?: JellyMaxBridge;
+    /** Origine du code chargé, renseignée par le chargeur d'index.html (scripts/vite-remote.mjs). */
+    __JM_SOURCE__?: { from: 'server' | 'local'; version: string };
     tizen?: TizenApi;
     webapis?: SamsungWebApis;
   }
 }
 
 export const APP_NAME = 'JellyMax';
-export const APP_VERSION = '1.0';
+/** Version de package.json, au format court (1.0.0 → 1.0) : celle du code chargé, éventuellement depuis le serveur de mises à jour. */
+export const APP_VERSION = __APP_VERSION__.replace(/\.0$/, '');
 
 export const isElectron = typeof window !== 'undefined' && !!window.jellymax;
 /** Application installée sur une TV Samsung (API Tizen disponibles). */

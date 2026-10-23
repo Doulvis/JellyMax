@@ -45,7 +45,7 @@
 - **Customizable subtitles**: size, color, background, outline, position and font.
 - **French and English**.
 
-Requires **Jellyfin 10.9 or newer**.
+Requires **Jellyfin 10.9 or newer**, including Jellyfin 12.
 
 ## Windows
 
@@ -152,6 +152,26 @@ src/i18n.ts        French / English translations
 ```
 
 All platforms share the same code; the touch layout lives in `src/styles/mobile.css`. The TV build (`vite build --mode tizen`) produces a single classic script targeting the TV browser (Chromium 69+), and adapts the stylesheet for older TVs.
+
+### Updates from your own server
+
+Installed apps can load the latest JellyMax from a web server you host, so you no longer reinstall the app on every device for each release. Each build keeps a small loader in its local `index.html`. At startup, the loader reads `<remoteUrl>/<windows|android|tizen>/manifest.json` and loads the JavaScript and CSS from the server. If the server is unreachable, it falls back to the copy built into the app. The page itself stays local, so saved sign-ins, the Electron bridge, Capacitor plugins and the TV remote keep working.
+
+Configure it in `~/.jellymax/server.json`, which is kept outside the repository (or set the `JELLYMAX_REMOTE_URL` environment variable):
+
+```json
+{
+  "remoteUrl": "https://jellymax.example.com",
+  "publish": { "host": "user@server", "path": "/var/www/jellymax", "key": "~/.ssh/id_ed25519" }
+}
+```
+
+- Builds made with this file load updates from `remoteUrl`. Builds made without it, like the ones on the Releases page, never contact any server other than your Jellyfin servers.
+- `npm run publish:server` builds the three versions and uploads them to `publish.path` over SSH (`tar` through `ssh`). The manifest is uploaded last, and older `assets/` files are kept, so devices never load a partial release.
+- The web server must send `Access-Control-Allow-Origin: *`, and should mark `manifest.json` as `no-cache` and `assets/` as immutable.
+- `jellymax.shell` in `package.json` is the version of the native layer (`electron/`, `android/`, `tizen/config.xml`). Increase it when you change native code. Devices with an older shell keep using their built-in copy until the app is reinstalled.
+- A device uses the server's version only if it is not older than the copy built into the app. *Settings → About* shows which copy is running.
+- To point a single device to another server, set `jm.remoteUrl` in its `localStorage`. You can do this from the dev tools on Windows.
 
 ## Privacy
 

@@ -240,7 +240,13 @@ export default function SettingsPage() {
 
         <section className="settings__section">
           <h2>{t('settings.about')}</h2>
-          <Row title={`JellyMax ${APP_VERSION}`} desc={t('settings.platform', { p: platformLabel, d: deviceId.slice(0, 10) })}>
+          <Row
+            title={`JellyMax ${APP_VERSION}`}
+            desc={
+              t('settings.platform', { p: platformLabel, d: deviceId.slice(0, 10) }) +
+              (window.__JM_SOURCE__ ? ' · ' + t(window.__JM_SOURCE__.from === 'server' ? 'settings.fromServer' : 'settings.fromLocal') : '')
+            }
+          >
             <span />
           </Row>
           <Row title={t('settings.formats')} desc={codecs}>

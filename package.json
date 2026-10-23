@@ -17,7 +17,11 @@
     "tizen:package": "npm run build:tizen && node scripts/tizen.mjs package",
     "tizen:install": "node scripts/tizen.mjs install",
     "build:android": "tsc --noEmit && vite build --mode android && cap sync android",
-    "android:apk": "npm run build:android && node scripts/android.mjs"
+    "android:apk": "npm run build:android && node scripts/android.mjs",
+    "publish:server": "node scripts/publish.mjs"
+  },
+  "jellymax": {
+    "shell": 1
   },
   "dependencies": {
     "@capacitor/android": "7.6.9",
