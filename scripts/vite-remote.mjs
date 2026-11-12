@@ -6,6 +6,8 @@
 // La page reste locale (file:// ou http://localhost) : sessions enregistrées, pont Electron, plugins
 // Capacitor, API Samsung et touches de la télécommande fonctionnent comme avant.
 //
+//  - l'adresse peut aussi être saisie sur l'appareil (Paramètres → À propos, clé `jm.remoteUrl` du localStorage) :
+//    elle est essayée avant celle du build ;
 //  - `remoteUrl` : adresse du serveur, dans ~/.jellymax/server.json (hors du dépôt, comme la clé de
 //    signature Android) ou la variable JELLYMAX_REMOTE_URL. Vide : pas de mises à jour depuis un serveur ;
 //  - `jellymax.shell` (package.json) : version de la coquille native. À incrémenter quand le code natif change
@@ -65,8 +67,11 @@ export function remotePlugin() {
             return '';
           })
           .replace(/\s*<link rel="modulepreload"[^>]*>/g, '');
-        manifest = { version, shell, js, css, module: channel !== 'tizen' };
-        const boot = { ...manifest, channel, remote: remoteUrl };
+        const local = { version, shell, js, css, module: channel !== 'tizen' };
+        // `remote` dans le manifeste publié : les appareils retiennent cette adresse, ce qui permet de déménager
+        // le serveur sans réinstaller (publier une dernière fois sur l'ancienne adresse avec la nouvelle `remoteUrl`).
+        manifest = remoteUrl ? { ...local, remote: remoteUrl } : local;
+        const boot = { ...local, channel, remote: remoteUrl };
         return html.replace(/(\s*)<\/head>/, `$1  <script>${loader(boot)}</script>$1</head>`);
       },
     },
@@ -83,7 +88,7 @@ var B=${JSON.stringify(boot)};
 function newer(a,b){a=String(a).split('.');b=String(b).split('.');for(var i=0;i<3;i++){var x=+a[i]||0,y=+b[i]||0;if(x!==y)return x>y;}return false;}
 function start(base,m,fallback){
   var head=document.head,added=[];
-  window.__JM_SOURCE__={from:base==='./'?'local':'server',version:m.version};
+  window.__JM_SOURCE__={from:base==='./'?'local':'server',version:m.version,builtin:B.remote||''};
   for(var i=0;i<m.css.length;i++){var l=document.createElement('link');l.rel='stylesheet';l.href=base+m.css[i];head.appendChild(l);added.push(l);}
   for(var j=0;j<m.js.length;j++){var s=document.createElement('script');s.src=base+m.js[j];s.async=false;
     if(m.module){s.type='module';s.crossOrigin='anonymous';}
@@ -91,23 +96,33 @@ function start(base,m,fallback){
     head.appendChild(s);added.push(s);}
 }
 function local(){start('./',B);}
-var remote=B.remote;try{remote=localStorage.getItem('jm.remoteUrl')||remote;}catch(e){}
-if(!remote)return local();
-var dir=remote.replace(/\\/+$/,'')+'/'+B.channel+'/',done=false;
-function once(f){return function(){if(done)return;done=true;f.apply(null,arguments);};}
-var fail=once(local);
-var ok=once(function(m){
-  if(!m||!m.js||!m.js.length||+m.shell>B.shell||newer(B.version,m.version)){local();return;}
-  start(dir,m,local);
-});
-try{
-  var x=new XMLHttpRequest();
-  x.open('GET',dir+'manifest.json?t='+Date.now(),true);
-  x.timeout=4000;
-  x.onload=function(){if(x.status!==200)return fail();var m;try{m=JSON.parse(x.responseText);}catch(e){return fail();}ok(m);};
-  x.onerror=x.ontimeout=fail;
-  x.send();
-  setTimeout(fail,5000);
-}catch(e){fail();}
+function clean(u){return String(u||'').replace(/\\/+$/,'');}
+// Adresses à essayer : celle mémorisée sur l'appareil (réglage, ou déménagement annoncé par le serveur), puis celle du build.
+var list=[];
+try{var saved=clean(localStorage.getItem('jm.remoteUrl'));if(saved)list.push(saved);}catch(e){}
+if(B.remote&&list.indexOf(clean(B.remote))<0)list.push(clean(B.remote));
+function attempt(i){
+  if(i>=list.length)return local();
+  var base=list[i],dir=base+'/'+B.channel+'/',done=false;
+  function once(f){return function(){if(done)return;done=true;f.apply(null,arguments);};}
+  var fail=once(function(){attempt(i+1);});
+  var ok=once(function(m){
+    if(!m||!m.js||!m.js.length)return attempt(i+1);
+    // Le serveur annonce sa nouvelle adresse : elle sera utilisée dès le prochain lancement.
+    try{var moved=clean(m.remote);if(/^https?:\\/\\//i.test(moved)&&moved!==base)localStorage.setItem('jm.remoteUrl',moved);}catch(e){}
+    if(+m.shell>B.shell||newer(B.version,m.version)){local();return;}
+    start(dir,m,local);
+  });
+  try{
+    var x=new XMLHttpRequest();
+    x.open('GET',dir+'manifest.json?t='+Date.now(),true);
+    x.timeout=4000;
+    x.onload=function(){if(x.status!==200)return fail();var m;try{m=JSON.parse(x.responseText);}catch(e){return fail();}ok(m);};
+    x.onerror=x.ontimeout=fail;
+    x.send();
+    setTimeout(fail,5000);
+  }catch(e){fail();}
+}
+attempt(0);
 })();`;
 }

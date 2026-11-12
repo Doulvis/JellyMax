@@ -166,12 +166,13 @@ Configure it in `~/.jellymax/server.json`, which is kept outside the repository 
 }
 ```
 
-- Builds made with this file load updates from `remoteUrl`. Builds made without it, like the ones on the Releases page, never contact any server other than your Jellyfin servers.
+- Builds made with this file load updates from `remoteUrl`. Builds made without it, like the ones on the Releases page, never contact any server other than your Jellyfin servers unless you enter an update server in the settings.
 - `npm run publish:server` builds the three versions and uploads them to `publish.path` over SSH (`tar` through `ssh`). The manifest is uploaded last, and older `assets/` files are kept, so devices never load a partial release.
 - The web server must send `Access-Control-Allow-Origin: *`, and should mark `manifest.json` as `no-cache` and `assets/` as immutable.
 - `jellymax.shell` in `package.json` is the version of the native layer (`electron/`, `android/`, `tizen/config.xml`). Increase it when you change native code. Devices with an older shell keep using their built-in copy until the app is reinstalled.
 - A device uses the server's version only if it is not older than the copy built into the app. *Settings → About* shows which copy is running.
-- To point a single device to another server, set `jm.remoteUrl` in its `localStorage`. You can do this from the dev tools on Windows.
+- To point a single device to another server, enter its address in *Settings → About → Update server*. This also turns updates on for a build made without `remoteUrl`, such as the ones on the Releases page. The address typed on the device is tried first, then the one built into the app.
+- Moving the server to a new address does not require reinstalling: change `remoteUrl`, then run `npm run publish:server` while the old address still works. The published manifest carries the new address, and each device remembers it the next time it starts.
 
 ## Privacy
 

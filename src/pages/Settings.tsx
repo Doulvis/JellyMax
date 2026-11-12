@@ -1,6 +1,6 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { api, deviceId } from '../api/client';
+import { api, deviceId, normalizeServerUrl } from '../api/client';
 import { getCapabilities } from '../api/deviceProfile';
 import type { PublicSystemInfo } from '../api/types';
 import { AvatarPicker } from '../components/AvatarPicker';
@@ -52,6 +52,56 @@ const BG_KEYS = { none: 'sub.bg.none', translucent: 'sub.bg.translucent', opaque
 const EDGE_KEYS = { shadow: 'sub.edge.shadow', outline: 'sub.edge.outline', none: 'sub.edge.none' } as const;
 const POS_KEYS = { low: 'sub.position.low', medium: 'sub.position.medium', high: 'sub.position.high' } as const;
 const FONT_KEYS = { sans: 'sub.font.sans', serif: 'sub.font.serif' } as const;
+
+const REMOTE_KEY = 'jm.remoteUrl';
+
+function savedUpdateServer() {
+  try {
+    return localStorage.getItem(REMOTE_KEY) || '';
+  } catch {
+    return '';
+  }
+}
+
+/** Adresse du serveur de mises à jour, lue par le chargeur d'index.html au lancement (scripts/vite-remote.mjs). */
+function UpdateServer() {
+  const builtin = window.__JM_SOURCE__?.builtin || '';
+  const [url, setUrl] = useState(() => savedUpdateServer() || builtin);
+  const [saved, setSaved] = useState(false);
+  const save = (e: FormEvent) => {
+    e.preventDefault();
+    const value = url.trim() ? normalizeServerUrl(url) : '';
+    try {
+      if (value && value !== builtin) localStorage.setItem(REMOTE_KEY, value);
+      else localStorage.removeItem(REMOTE_KEY);
+    } catch {
+      return;
+    }
+    setUrl(value || builtin);
+    setSaved(true);
+  };
+  return (
+    <Row title={t('settings.updateServer')} desc={t(saved ? 'settings.updateServerSaved' : 'settings.updateServerDesc')}>
+      <form className="setting__url" onSubmit={save}>
+        <input
+          type="url"
+          inputMode="url"
+          spellCheck={false}
+          aria-label={t('settings.updateServer')}
+          placeholder="https://jellymax.example.com"
+          value={url}
+          onChange={(e) => {
+            setUrl(e.target.value);
+            setSaved(false);
+          }}
+        />
+        <button className="btn btn--ghost btn--sm" type="submit">
+          {t('settings.save')}
+        </button>
+      </form>
+    </Row>
+  );
+}
 
 function options<K extends string>(map: Record<K, Parameters<typeof t>[0]>) {
   return (Object.keys(map) as K[]).map((k) => ({ value: k, label: t(map[k]) }));
@@ -249,6 +299,7 @@ export default function SettingsPage() {
           >
             <span />
           </Row>
+          {window.__JM_SOURCE__ && <UpdateServer />}
           <Row title={t('settings.formats')} desc={codecs}>
             <span />
           </Row>

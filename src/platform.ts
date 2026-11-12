@@ -53,7 +53,7 @@ declare global {
   interface Window {
     jellymax?: JellyMaxBridge;
     /** Origine du code chargé, renseignée par le chargeur d'index.html (scripts/vite-remote.mjs). */
-    __JM_SOURCE__?: { from: 'server' | 'local'; version: string };
+    __JM_SOURCE__?: { from: 'server' | 'local'; version: string; builtin?: string };
     tizen?: TizenApi;
     webapis?: SamsungWebApis;
   }

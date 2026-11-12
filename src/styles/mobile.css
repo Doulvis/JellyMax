@@ -703,6 +703,15 @@ html.is-mobile {
 .is-mobile .setting__text {
   flex: 1 1 12rem;
 }
+.is-mobile .setting__url {
+  flex: 1 1 100%;
+}
+.is-mobile .setting__url input {
+  flex: 1;
+  width: auto;
+  min-width: 0;
+  font-size: 16px;
+}
 .is-mobile .settings__section {
   margin-bottom: 1.8rem;
 }
